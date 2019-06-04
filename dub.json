@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"undefeated"
+	],
+  "dependencies": {
+    "serialport": "~>2.2.0"
+  },
+	"copyright": "Copyright © 2019, undefeated",
+	"description": "A minimal D application.",
+	"license": "proprietary",
+	"name": "ft12"
+}
