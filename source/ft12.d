@@ -1,4 +1,5 @@
 module ft12;
+import std.stdio;
 
 enum FT12FrameType {
   ackFrame,
@@ -58,6 +59,7 @@ class FT12Helper {
   private ubyte[] _buffer;
   void parse(ubyte[] chunk) {
     _buffer ~= chunk;
+    writeln("buffer concated: ", _buffer);
     auto processed = false;
     while(!processed) {
       while(_isBuffersEqual(_buffer[0..1], ackFrame)) {
@@ -120,6 +122,17 @@ class FT12Helper {
               int checkSum = _buffer[expectedLen - 2];
               // compare checksum received and expected
               auto expectedCheckSum = calculateCheckSum(cast(ubyte[])[controlByte] ~ message);
+              
+              //////////////////////////////////////
+              // delete data from buffer
+              // no matter, was it correct or not
+              if (_buffer.length > expectedLen) {
+                _buffer = _buffer[expectedLen..$];
+              } else {
+                _buffer = [];
+              }
+              processed = true;
+              //////////////////////////////////////
               // if checksum is right, then emit frame to delegate
               if (checkSum == expectedCheckSum) {
                 FT12Frame result;
@@ -128,16 +141,9 @@ class FT12Helper {
                 // call delegate
                 onReceived(result);
               }
-              // if not, it doesn't matter, data will be deleted from _buffer
-            }
-            // delete data from buffer
-            // no matter, was it correct or not
-            if (_buffer.length > expectedLen) {
-              _buffer = _buffer[expectedLen..$];
-            } else {
-              _buffer = [];
             }
             processed = true;
+            writeln("buffer now is: ", _buffer);
           } else {
             // wait for the next chunk
             processed = true;
@@ -169,6 +175,7 @@ class FT12Helper {
       if (_buffer.length == 0) {
         //buffer now is empty, parsed completely
         processed = true;
+        writeln("parsed completely");
       }
     }
   }

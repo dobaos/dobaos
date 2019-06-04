@@ -1,75 +1,75 @@
-module object_server;
+  module object_server;
 
-import std.conv;
-import std.stdio;
+  import std.conv;
+  import std.stdio;
 
 
-ubyte ObjServerMainService = 0xF0;
-enum ObjServerServices {
-  GetServerItemReq = 0x01,
-  GetServerItemRes = 0x81,
-  SetServerItemReq = 0x02,
-  SetServerItemRes = 0x82,
-  GetDatapointDescriptionReq = 0x03,
-  GetDatapointDescriptionRes = 0x83,
-  GetDatapointValueReq = 0x05,
-  GetDatapointValueRes = 0x85,
-  SetDatapointValueReq = 0x06,
-  SetDatapointValueRes =  0x86,
-  GetParameterByteReq = 0x07,
-  GetParameterByteRes = 0x87,
-  ServerItemInd = 0xC2,
-  DatapointValueInd = 0xC1,
-}
+  ubyte ObjServerMainService = 0xF0;
+  enum ObjServerServices {
+    GetServerItemReq = 0x01,
+    GetServerItemRes = 0x81,
+    SetServerItemReq = 0x02,
+    SetServerItemRes = 0x82,
+    GetDatapointDescriptionReq = 0x03,
+    GetDatapointDescriptionRes = 0x83,
+    GetDatapointValueReq = 0x05,
+    GetDatapointValueRes = 0x85,
+    SetDatapointValueReq = 0x06,
+    SetDatapointValueRes =  0x86,
+    GetParameterByteReq = 0x07,
+    GetParameterByteRes = 0x87,
+    ServerItemInd = 0xC2,
+    DatapointValueInd = 0xC1,
+  }
 
-enum ObjServerMessageDirection {
-  request,
-  response,
-  indication
-}
+  enum ObjServerMessageDirection {
+    request,
+    response,
+    indication
+  }
 
-enum ObjServerDatapointValueFilter {
-  all = 0x00,
-  valid = 0x01,
-  updated = 0x02
-}
+  enum ObjServerDatapointValueFilter {
+    all = 0x00,
+    valid = 0x01,
+    updated = 0x02
+  }
 
-struct ObjServerDatapointValue  {
-    int id;
-    int state;
-    int length;
-    ubyte[] value;
-}
+  struct ObjServerDatapointValue  {
+      int id;
+      int state;
+      int length;
+      ubyte[] value;
+  }
 
-struct ObjServerServerItem  {
-    int id;
-    int length;
-    ubyte[] value;
-}
+  struct ObjServerServerItem  {
+      int id;
+      int length;
+      ubyte[] value;
+  }
 
-// TODO:
-// DPT as a different class for higher level - converting
-// here is enough just enum
-enum ObjServerDatapointType {
-  unknown,
-  dpt1 = 1,
-  dpt2 = 2,
-  dpt3 = 3,
-  dpt4 = 4,
-  dpt5 = 5,
-  dpt6 = 6,
-  dpt7 = 7,
-  dpt8 = 8,
-  dpt9 = 9,
-  dpt10 = 10,
-  dpt11 = 11,
-  dpt12 = 12,
-  dpt13 = 13,
-  dpt14 = 14,
-  dpt15 = 15,
-  dpt16 = 16,
-  dpt17 = 17,
-  dpt18 = 18
+  // TODO:
+  // DPT as a different class for higher level - converting
+  // here is enough just enum
+  enum ObjServerDatapointType {
+    unknown,
+    dpt1 = 1,
+    dpt2 = 2,
+    dpt3 = 3,
+    dpt4 = 4,
+    dpt5 = 5,
+    dpt6 = 6,
+    dpt7 = 7,
+    dpt8 = 8,
+    dpt9 = 9,
+    dpt10 = 10,
+    dpt11 = 11,
+    dpt12 = 12,
+    dpt13 = 13,
+    dpt14 = 14,
+    dpt15 = 15,
+    dpt16 = 16,
+    dpt17 = 17,
+    dpt18 = 18
 }
 
 enum ObjServerDatapointPriority {
@@ -284,27 +284,32 @@ class ObjectServerProtocol {
       switch(subService) {
         case ObjServerServices.GetServerItemRes:
           writeln("GetServerItemRes");
+          result.direction = ObjServerMessageDirection.response;
           result.service= ObjServerServices.GetServerItemRes;
           result.server_items = _processServerItemRes(data[2..$]);
           break;
         case ObjServerServices.ServerItemInd:
           writeln("ServerItemInd");
+          result.direction = ObjServerMessageDirection.indication;
           result.service= ObjServerServices.ServerItemInd;
           result.server_items = _processServerItemRes(data[2..$]);
           break;
         case ObjServerServices.GetDatapointDescriptionRes:
           writeln("GetDatapointDescriptionRes");
+          result.direction = ObjServerMessageDirection.response;
           result.service= ObjServerServices.GetDatapointDescriptionRes;
           result.datapoint_descriptions = _processDatapointDescriptionRes(data[2..$]);
           break;
         case ObjServerServices.GetDatapointValueRes:
           writeln("GetDatapointValueRes");
+          result.direction = ObjServerMessageDirection.response;
           result.service= ObjServerServices.GetDatapointValueRes;
           result.datapoint_values = _processDatapointValueRes(data[2..$]);
           break;
         case ObjServerServices.DatapointValueInd:
           writeln("DatapointValueInd");
           result.service= ObjServerServices.DatapointValueInd;
+          result.direction = ObjServerMessageDirection.indication;
           result.datapoint_values = _processDatapointValueRes(data[2..$]);
           break;
         default:
