@@ -59,7 +59,6 @@ class FT12Helper {
   private ubyte[] _buffer;
   void parse(ubyte[] chunk) {
     _buffer ~= chunk;
-    writeln("buffer concated: ", _buffer);
     auto processed = false;
     while(!processed) {
       while(_isBuffersEqual(_buffer[0..1], ackFrame)) {
@@ -130,8 +129,8 @@ class FT12Helper {
                 _buffer = _buffer[expectedLen..$];
               } else {
                 _buffer = [];
+                processed = true;
               }
-              processed = true;
               //////////////////////////////////////
               // if checksum is right, then emit frame to delegate
               if (checkSum == expectedCheckSum) {
@@ -142,8 +141,6 @@ class FT12Helper {
                 onReceived(result);
               }
             }
-            processed = true;
-            writeln("buffer now is: ", _buffer);
           } else {
             // wait for the next chunk
             processed = true;
@@ -175,7 +172,6 @@ class FT12Helper {
       if (_buffer.length == 0) {
         //buffer now is empty, parsed completely
         processed = true;
-        writeln("parsed completely");
       }
     }
   }

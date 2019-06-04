@@ -6,6 +6,7 @@
 
   ubyte ObjServerMainService = 0xF0;
   enum ObjServerServices {
+    unknown,
     GetServerItemReq = 0x01,
     GetServerItemRes = 0x81,
     SetServerItemReq = 0x02,
@@ -35,9 +36,9 @@
   }
 
   struct ObjServerDatapointValue  {
-      int id;
-      int state;
-      int length;
+      ushort id;
+      ubyte state;
+      ubyte length;
       ubyte[] value;
   }
 
@@ -132,7 +133,7 @@ class ObjectServerProtocol {
       // TODO: think about safety
       i += 3;
       ubyte[] _value = data[i..i + value_length];
-      writeln("server item value: ", _value);
+      //writeln("server item value: ", _value);
       i += value_length;
 
       ObjServerServerItem _result;
@@ -147,12 +148,10 @@ class ObjectServerProtocol {
 
     // now, return array with only parsed datapoint values
     result.length = count;
-    writeln(result);
     return result;
   }
 
   private static ObjServerDatapointDescription[] _processCommonDatapointDescriptions(ubyte[] data) {
-    writeln("_processCommonDatapointDescriptions: ", data);
     ObjServerDatapointDescription[] result;
     result.length = 64;
     
@@ -188,7 +187,6 @@ class ObjectServerProtocol {
 
     // now, return array with only parsed datapoint values
     result.length = count;
-    writeln(result);
     return result;
   }
 
@@ -210,14 +208,13 @@ class ObjectServerProtocol {
     int i = 0;
     while(i < data.length) {
       // TODO: readUInt16BE
-      int id = data[i]*256 + data[i + 1];
-      int value_state = data[i + 2];
-      int value_length = data[i + 3];
+      ushort id = data[i]*256 + data[i + 1];
+      ubyte value_state = data[i + 2];
+      ubyte value_length = data[i + 3];
     
       // TODO: think about safety
       i += 4;
       ubyte[] _value = data[i..i + value_length];
-      writeln("_value: ", _value);
       i += value_length;
 
       ObjServerDatapointValue _result;
@@ -233,7 +230,6 @@ class ObjectServerProtocol {
 
     // now, return array with only parsed datapoint values
     result.length = count;
-    writeln(result);
     return result;
   }
 
@@ -283,31 +279,37 @@ class ObjectServerProtocol {
     if (mainService == ObjServerMainService) {
       switch(subService) {
         case ObjServerServices.GetServerItemRes:
-          writeln("GetServerItemRes");
+          //writeln("GetServerItemRes");
           result.direction = ObjServerMessageDirection.response;
           result.service= ObjServerServices.GetServerItemRes;
           result.server_items = _processServerItemRes(data[2..$]);
           break;
         case ObjServerServices.ServerItemInd:
-          writeln("ServerItemInd");
+          //writeln("ServerItemInd");
           result.direction = ObjServerMessageDirection.indication;
           result.service= ObjServerServices.ServerItemInd;
           result.server_items = _processServerItemRes(data[2..$]);
           break;
         case ObjServerServices.GetDatapointDescriptionRes:
-          writeln("GetDatapointDescriptionRes");
+          //writeln("GetDatapointDescriptionRes");
           result.direction = ObjServerMessageDirection.response;
           result.service= ObjServerServices.GetDatapointDescriptionRes;
           result.datapoint_descriptions = _processDatapointDescriptionRes(data[2..$]);
           break;
         case ObjServerServices.GetDatapointValueRes:
-          writeln("GetDatapointValueRes");
+          //writeln("GetDatapointValueRes");
           result.direction = ObjServerMessageDirection.response;
           result.service= ObjServerServices.GetDatapointValueRes;
           result.datapoint_values = _processDatapointValueRes(data[2..$]);
           break;
+        case ObjServerServices.SetDatapointValueRes:
+          writeln("SetDatapointValueRes:", data);
+          result.direction = ObjServerMessageDirection.response;
+          result.service= ObjServerServices.GetDatapointValueRes;
+          // TODO: parse response
+          break;
         case ObjServerServices.DatapointValueInd:
-          writeln("DatapointValueInd");
+          //writeln("DatapointValueInd");
           result.service= ObjServerServices.DatapointValueInd;
           result.direction = ObjServerMessageDirection.indication;
           result.datapoint_values = _processDatapointValueRes(data[2..$]);
@@ -370,6 +372,46 @@ class ObjectServerProtocol {
     // number BE
     result[4] = cast(ubyte) (number/256);
     result[5] = cast(ubyte) number%256;
+
+    return result;
+  }
+  static ubyte[] SetDatapointValueReq(ushort start, ObjServerDatapointValue[] values) {
+    ubyte[] result;
+    // max len
+    int valueLen = 0;
+    foreach(ObjServerDatapointValue value; values) {
+      // id, cmd, len, value
+      valueLen += 2 + 1 + 1+ value.value.length;
+    }
+    result.length = 6 + valueLen;
+
+    // fill
+    ubyte main = ObjServerMainService;
+    ubyte service = ObjServerServices.SetDatapointValueReq;
+    result[0] = main;
+    result[1] = service;
+    // start BE
+    result[2] = cast(ubyte) (start/256);
+    result[3] = cast(ubyte) start%256;
+    // number BE
+    ushort number = cast(ushort) values.length;
+    result[4] = cast(ubyte) (number/256);
+    result[5] = cast(ubyte) number%256;
+    
+    // current position
+    int c = 6; 
+    foreach(ObjServerDatapointValue value; values) {
+      // end position of value chunk
+      result[c] = cast(ubyte) (value.id/256);
+      result[c+1] = cast(ubyte) value.id%256;
+      // command: set and send
+      result[c+2] = 3;
+      result[c+3] = cast(ubyte) value.value.length;
+      int e = c+4 + cast(int) value.value.length;
+      result[c+4..e] = value.value[0..$];
+      c = e;
+    }
+    writeln(result);
 
     return result;
   }
