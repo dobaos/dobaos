@@ -35,22 +35,22 @@ void main()
     ObjectServerMessage ind = baos.processInd();
     if (ind.service != ObjServerServices.unknown) {
       writeln("here comes message[ind]: ", ind);
-    }
-    Thread.sleep(1.msecs);
-    // example
-    foreach(ObjServerDatapointValue dv; ind.datapoint_values) {
-      if (dv.id == 10) {
-        ObjServerDatapointValue[] newVal;
-        newVal.length = 1;
-        newVal[0].id = 11;
-        newVal[0].value.length = 1;
-        writeln("old val: ", dv.value[0]);
-        newVal[0].value[0] = dv.value[0] == 0? 32: 8;
-        writeln("new val: ", newVal[0].value[0]);
-        Thread.sleep(1.msecs);
-        baos.SetDatapointValueReq(cast(ushort) 10, newVal);
+      // example
+      foreach(ObjServerDatapointValue dv; ind.datapoint_values) {
+        if (dv.id == 10) {
+          ObjServerDatapointValue[] newVal;
+          newVal.length = 1;
+          newVal[0].id = 11;
+          newVal[0].value.length = 1;
+          writeln("old val: ", dv.value[0]);
+          newVal[0].value[0] = dv.value[0] == 0? 32: 8;
+          writeln("new val: ", newVal[0].value[0]);
+          Thread.sleep(1.msecs);
+          baos.SetDatapointValueReq(cast(ushort) 10, newVal);
+        }
       }
     }
+    Thread.sleep(1.msecs);
     // process redis messages here?
     // TODO: simple messages as a model; test
   }
