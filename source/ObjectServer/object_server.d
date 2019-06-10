@@ -2,6 +2,8 @@
 
   import std.conv;
   import std.stdio;
+  import std.string;
+  
 
 
   ubyte ObjServerMainService = 0xF0;
@@ -99,6 +101,8 @@ struct ObjServerDatapointDescription {
 struct ObjectServerMessage {
   ObjServerServices service;
   ObjServerMessageDirection direction;
+  bool success;
+  Exception error;
   union {
     // TODO: union of possible service returned structs
     // DatapointDescriptions/DatapointValues/ServerItems/ParameterBytes
@@ -239,8 +243,7 @@ class ObjectServerProtocol {
     int number = data[2]*256 + data[3];
     if (number == 0) {
       // TODO: error handling
-      writeln("number field has null value. error code: ", data[4]);
-      throw new Exception("Number of items is 0. Error code: ..not yet");
+      throw new Exception(format("%d", data[4]));
     }
 
     return _processServerItems(data[4..$]);
@@ -252,8 +255,7 @@ class ObjectServerProtocol {
     int number = data[2]*256 + data[3];
     if (number == 0) {
       // TODO: error handling
-      writeln("datapoint number field has null value. error code: ", data[4]);
-      throw new Exception("Datapoint number is 0. Error code: ..not yet");
+      throw new Exception(format("%d", data[4]));
     }
 
     return _processCommonDatapointValues(data[4..$]);
@@ -264,9 +266,7 @@ class ObjectServerProtocol {
     int start = data[0]*256 + data[1];
     int number = data[2]*256 + data[3];
     if (number == 0) {
-      // TODO: error handling
-      writeln("datapoint number field has null value. error code: ", data[4]);
-      throw new Exception("Datapoint number is 0. Error code: ..not yet");
+      throw new Exception(format("%d", data[4]));
     }
 
     return _processCommonDatapointDescriptions(data[4..$]);
@@ -294,7 +294,13 @@ class ObjectServerProtocol {
           //writeln("GetDatapointDescriptionRes");
           result.direction = ObjServerMessageDirection.response;
           result.service= ObjServerServices.GetDatapointDescriptionRes;
-          result.datapoint_descriptions = _processDatapointDescriptionRes(data[2..$]);
+          try {
+            result.success = true;
+            result.datapoint_descriptions = _processDatapointDescriptionRes(data[2..$]);
+          } catch(Exception e) {
+            result.success = false;
+            result.error = e;
+          }
           break;
         case ObjServerServices.GetDatapointValueRes:
           //writeln("GetDatapointValueRes");
