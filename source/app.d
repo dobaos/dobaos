@@ -15,7 +15,7 @@ import object_server;
 const ushort MAX_DATAPOINT_NUM = 1000;
 ushort SI_currentBufferSize;
 
-Redis redis;
+Redis pub;
 Subscriber sub;
 
 void main()
@@ -27,9 +27,8 @@ void main()
   // maximum buffer size
   SI_currentBufferSize = 0;
   if (serverItemMessage.service == OS_Services.GetServerItemRes) {
-    writeln("server items: good");
     foreach(OS_ServerItem si; serverItemMessage.server_items) {
-      writeln(si);
+      //writeln(si);
       // maximum buffer size
       if (si.id == 14) {
         SI_currentBufferSize = si.value.read!ushort();
@@ -37,6 +36,8 @@ void main()
       }
     }
   }
+  writeln("Server items loaded");
+  writeln("Loading datapoints");
   /***
     if (datapointValueMessage.service == OS_Services.GetDatapointValueRes) {
     writeln("values: good");
@@ -47,6 +48,8 @@ void main()
    ***/
   // TODO: calculate max num of dps
 
+  // count for loaded datapoints
+  auto count = 0;
   // GetDatapointDescriptionRes has a header(6b) and 5bytes each dp
   ushort number = cast(ushort)(SI_currentBufferSize - 6)/5;
   ushort start = 1;
@@ -58,14 +61,17 @@ void main()
     auto descr = baos.GetDatapointDescriptionReq(start, number);
     if (descr.success) {
       foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
-        writeln("here comes description #", dd.id, "[", dd.type, "] ");
+        //writeln("here comes description #", dd.id, "[", dd.type, "] ");
+        // TODO: save in hash?
+        count++;
       }
     } else {
-      writeln("here comes error:", start, "-", number,": ", descr.error.message);
+      //writeln("here comes error:", start, "-", number,": ", descr.error.message);
     }
     start += number;
   }
-          Redis _pub = new Redis();
+  writeln("Datapoints loaded. ", count);
+ pub = new Redis();
 
   void handleMessage(string channel, string message)
   {
@@ -88,14 +94,14 @@ void main()
     } catch(Exception e) {
       writeln("error parsing json: %s ", e.msg);
     } finally {
-      _pub.send("PUBLISH", "friend", "OK");
+      pub.send("PUBLISH", "friend", "OK");
     }
   }
 
-  Subscriber _sub = new Subscriber();
-  _sub.subscribe("hello", toDelegate(&handleMessage));
+  sub = new Subscriber();
+  sub.subscribe("hello", toDelegate(&handleMessage));
 
-
+  writeln("IPC ready");
 
   // process incoming values
   while(true) {
@@ -121,7 +127,7 @@ void main()
     Thread.sleep(2.msecs);
     // process redis messages here?
     // TODO: simple messages as a model; test
-    _sub.processMessages();
+    sub.processMessages();
   }
 }
 
