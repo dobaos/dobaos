@@ -65,6 +65,7 @@ void main()
     }
     start += number;
   }
+          Redis _pub = new Redis();
 
   void handleMessage(string channel, string message)
   {
@@ -76,7 +77,7 @@ void main()
       // TODO: move to different source file
 
       // just example
-      auto descr = baos.GetDatapointDescriptionReq(1, 11);
+      auto descr = baos.GetDatapointDescriptionReq(1, 1);
       if (descr.success) {
         foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
           writeln("here comes description #", dd.id, "[", dd.type, "] ");
@@ -86,6 +87,8 @@ void main()
       }
     } catch(Exception e) {
       writeln("error parsing json: %s ", e.msg);
+    } finally {
+      _pub.send("PUBLISH", "friend", "OK");
     }
   }
 
@@ -115,7 +118,7 @@ void main()
       }
     }
     // TODO: calculate approximate sleep time depending on baudrate
-    Thread.sleep(6.msecs);
+    Thread.sleep(2.msecs);
     // process redis messages here?
     // TODO: simple messages as a model; test
     _sub.processMessages();

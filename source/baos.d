@@ -7,6 +7,8 @@ import serialport;
 // mi libs
 import ft12;
 import object_server;
+import datapoints;
+import ipc;
 
 class Baos {
   private SerialPortNonBlk com;
@@ -122,7 +124,7 @@ class Baos {
       com.write(buffer);
       while(!responseReceived) {
         processIncomingData();
-        Thread.sleep(6.msecs);
+        Thread.sleep(2.msecs);
       }
       return _res;
     }
