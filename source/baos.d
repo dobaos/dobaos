@@ -18,16 +18,16 @@ class Baos {
   // emitter for received objectserver messages(ind)
 
   // var to store result for last response
-  ObjectServerMessage _res;
+  OS_Message _res;
   // and indications. 
-  ObjectServerMessage[] _ind;
+  OS_Message[] _ind;
 
   private bool resetAckReceived = false;
   private bool ackReceived = true;
   private bool responseReceived = true;
 
   private void onFT12Frame(FT12Frame frame) {
-    ObjectServerMessage[] messagesToEmit = [];
+    OS_Message[] messagesToEmit = [];
     bool isAck = frame.isAckFrame();
     bool isResetInd = frame.isResetInd();
     bool isDataFrame = frame.isDataFrame();
@@ -47,19 +47,19 @@ class Baos {
       ubyte[] ackBuffer = FT12Helper.compose(ackFrame);
       com.write(ackBuffer);
     } else  if (isDataFrame) {
-      ObjectServerMessage result = ObjectServerProtocol.processIncomingMessage(frame.payload);
+      OS_Message result = OS_Protocol.processIncomingMessage(frame.payload);
       // send reset request
       FT12Frame ackFrame;
       ackFrame.type = FT12FrameType.ackFrame;
       ubyte[] ackBuffer = FT12Helper.compose(ackFrame);
       com.write(ackBuffer);
 
-      if (result.direction == ObjServerMessageDirection.indication) {
+      if (result.direction == OS_MessageDirection.indication) {
         //writeln("is indication");
         // return message
         _ind.length++;
         _ind[$-1] = result;
-      } else if(result.direction == ObjServerMessageDirection.response) {
+      } else if(result.direction == OS_MessageDirection.response) {
         //writeln("is response");
         // if sometimes 0xe5 is not received
         ackReceived = true;
@@ -85,7 +85,7 @@ class Baos {
     return tmp.length;
   }
 
-  public ObjectServerMessage processInd() {
+  public OS_Message processInd() {
     processIncomingData();
     if (_ind.length > 0) {
       auto result = _ind[0];
@@ -97,13 +97,13 @@ class Baos {
       return result;
     }
 
-    ObjectServerMessage result;
-    result.service = ObjServerServices.unknown;
+    OS_Message result;
+    result.service = OS_Services.unknown;
 
     return  result;
   }
 
-  private ObjectServerMessage commonRequest(ubyte[] message) {
+  private OS_Message commonRequest(ubyte[] message) {
     // reqs are syncronuous, so, no queue is required
     if (resetAckReceived && ackReceived && responseReceived) {
       ackReceived = false;
@@ -126,24 +126,24 @@ class Baos {
       }
       return _res;
     }
-    
-    ObjectServerMessage result;
-    result.service = ObjServerServices.unknown;
+
+    OS_Message result;
+    result.service = OS_Services.unknown;
     return result;
   }
-  public ObjectServerMessage GetDatapointDescriptionReq(uint start, uint number = 1) {
-    return commonRequest(ObjectServerProtocol.GetDatapointDescriptionReq(start, number));
+  public OS_Message GetDatapointDescriptionReq(uint start, uint number = 1) {
+    return commonRequest(OS_Protocol.GetDatapointDescriptionReq(start, number));
   }
-  public ObjectServerMessage GetServerItemReq(uint start, uint number = 1) {
-    return commonRequest(ObjectServerProtocol.GetServerItemReq(start, number));
+  public OS_Message GetServerItemReq(uint start, uint number = 1) {
+    return commonRequest(OS_Protocol.GetServerItemReq(start, number));
   }
-  public ObjectServerMessage GetDatapointValueReq(uint start, uint number = 1) {
-    return commonRequest(ObjectServerProtocol.GetDatapointValueReq(start, number));
+  public OS_Message GetDatapointValueReq(uint start, uint number = 1) {
+    return commonRequest(OS_Protocol.GetDatapointValueReq(start, number));
   }
-  public ObjectServerMessage SetDatapointValueReq(ushort start, ObjServerDatapointValue[] values) {
+  public OS_Message SetDatapointValueReq(ushort start, OS_DatapointValue[] values) {
     // TODO: get rid of start, sort values array by id, then values[0].id is start.
     writeln("baos.SetDatapointValueReq");
-    return commonRequest(ObjectServerProtocol.SetDatapointValueReq(start, values));
+    return commonRequest(OS_Protocol.SetDatapointValueReq(start, values));
   }
   // constructor
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {

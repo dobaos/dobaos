@@ -1,3 +1,15 @@
+/***
+  This class serves to compose/parse FT1.2 frames
+  in which ObjectServer message is incapsulated
+  there is a two general types of FT12 frame
+  1. Frames with fixed length
+    - ack 0x05
+      reset request
+      reset ind
+  2. Frames with variable length
+      data frame
+  ***/
+
 module ft12;
 import std.stdio;
 

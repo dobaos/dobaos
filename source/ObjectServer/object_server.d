@@ -1,89 +1,97 @@
-  module object_server;
+/*** 
+  To compose/process OS_ requests/responses
+  Following methods will be supported by this class:
+  1. GetServerItemReq/Res; ServerItemInd
+  2. SetServerItemReq/Res
+  3. GetDatapointDescriptionReq/Res
+  4. GetDatapointValueReq/Res; DatapointValueInd
+  5. SetDatapointValueReq/Res
+  6. GetParameterByteReq/Res
+ ***/
+module object_server;
 
-  import std.conv;
-  import std.stdio;
-  import std.string;
-  
+import std.conv;
+import std.stdio;
+import std.string;
+import std.bitmanip;
+import std.range.primitives : empty;
 
-
-  ubyte ObjServerMainService = 0xF0;
-  enum ObjServerServices {
-    unknown,
-    GetServerItemReq = 0x01,
-    GetServerItemRes = 0x81,
-    SetServerItemReq = 0x02,
-    SetServerItemRes = 0x82,
-    GetDatapointDescriptionReq = 0x03,
-    GetDatapointDescriptionRes = 0x83,
-    GetDatapointValueReq = 0x05,
-    GetDatapointValueRes = 0x85,
-    SetDatapointValueReq = 0x06,
-    SetDatapointValueRes =  0x86,
-    GetParameterByteReq = 0x07,
-    GetParameterByteRes = 0x87,
-    ServerItemInd = 0xC2,
-    DatapointValueInd = 0xC1,
-  }
-
-  enum ObjServerMessageDirection {
-    request,
-    response,
-    indication
-  }
-
-  enum ObjServerDatapointValueFilter {
-    all = 0x00,
-    valid = 0x01,
-    updated = 0x02
-  }
-
-  struct ObjServerDatapointValue  {
-      ushort id;
-      ubyte state;
-      ubyte length;
-      ubyte[] value;
-  }
-
-  struct ObjServerServerItem  {
-      int id;
-      int length;
-      ubyte[] value;
-  }
-
-  // TODO:
-  // DPT as a different class for higher level - converting
-  // here is enough just enum
-  enum ObjServerDatapointType {
-    unknown,
-    dpt1 = 1,
-    dpt2 = 2,
-    dpt3 = 3,
-    dpt4 = 4,
-    dpt5 = 5,
-    dpt6 = 6,
-    dpt7 = 7,
-    dpt8 = 8,
-    dpt9 = 9,
-    dpt10 = 10,
-    dpt11 = 11,
-    dpt12 = 12,
-    dpt13 = 13,
-    dpt14 = 14,
-    dpt15 = 15,
-    dpt16 = 16,
-    dpt17 = 17,
-    dpt18 = 18
+ubyte OS_MainService = 0xF0;
+enum OS_Services {
+  unknown,
+  GetServerItemReq = 0x01,
+  GetServerItemRes = 0x81,
+  SetServerItemReq = 0x02,
+  SetServerItemRes = 0x82,
+  GetDatapointDescriptionReq = 0x03,
+  GetDatapointDescriptionRes = 0x83,
+  GetDatapointValueReq = 0x05,
+  GetDatapointValueRes = 0x85,
+  SetDatapointValueReq = 0x06,
+  SetDatapointValueRes =  0x86,
+  GetParameterByteReq = 0x07,
+  GetParameterByteRes = 0x87,
+  ServerItemInd = 0xC2,
+  DatapointValueInd = 0xC1,
 }
 
-enum ObjServerDatapointPriority {
+// serves to indicate direction of message
+enum OS_MessageDirection {
+  request,
+  response,
+  indication
+}
+
+enum OS_DatapointValueFilter {
+  all = 0x00,
+  valid = 0x01,
+  updated = 0x02
+}
+
+struct OS_DatapointValue  {
+  ushort id;
+  ubyte state;
+  ubyte length;
+  ubyte[] value;
+}
+
+struct OS_ServerItem  {
+  ushort id;
+  ubyte length;
+  ubyte[] value;
+}
+
+enum OS_DatapointType {
+  unknown,
+  dpt1 = 1,
+  dpt2 = 2,
+  dpt3 = 3,
+  dpt4 = 4,
+  dpt5 = 5,
+  dpt6 = 6,
+  dpt7 = 7,
+  dpt8 = 8,
+  dpt9 = 9,
+  dpt10 = 10,
+  dpt11 = 11,
+  dpt12 = 12,
+  dpt13 = 13,
+  dpt14 = 14,
+  dpt15 = 15,
+  dpt16 = 16,
+  dpt17 = 17,
+  dpt18 = 18
+}
+
+enum OS_DatapointPriority {
   system = 0b00,
   high = 0b01,
   alarm = 0b10,
   low = 0b11
 };
 
-struct ObjServerConfigFlags {
-  ObjServerDatapointPriority priority;
+struct OS_ConfigFlags {
+  OS_DatapointPriority priority;
   bool communication;
   bool read;
   bool write;
@@ -92,28 +100,28 @@ struct ObjServerConfigFlags {
   bool update;
 };
 
-struct ObjServerDatapointDescription {
-  int id;
-  ObjServerDatapointType type;
-  ObjServerConfigFlags flags;
+struct OS_DatapointDescription {
+  ushort id;
+  OS_DatapointType type;
+  OS_ConfigFlags flags;
 }
 
-struct ObjectServerMessage {
-  ObjServerServices service;
-  ObjServerMessageDirection direction;
+struct OS_Message {
+  OS_Services service;
+  OS_MessageDirection direction;
   bool success;
-  Exception error;
   union {
     // TODO: union of possible service returned structs
     // DatapointDescriptions/DatapointValues/ServerItems/ParameterBytes
-    ObjServerDatapointDescription[] datapoint_descriptions;
-    ObjServerDatapointValue[] datapoint_values;
-    ObjServerServerItem[] server_items;
+    OS_DatapointDescription[] datapoint_descriptions;
+    OS_DatapointValue[] datapoint_values;
+    OS_ServerItem[] server_items;
+    Exception error;
   };
 }
 
-class ObjectServerProtocol {
-  private static ObjServerServerItem[] _processServerItems(ubyte[] data) {
+class OS_Protocol {
+  private static OS_ServerItem[] _processServerItems(ubyte[] data) {
     // max size of baos message is 250 by default(ServerItems.MaxBufferSize)
     // 250 - 6[header] - ((2[id] + 1[state] + 1[length byte])[datapoint header] + <length>)*x > 0
     // (4 + length)*x < 244
@@ -121,26 +129,27 @@ class ObjectServerProtocol {
     // so
     // 4*x < 244
     // x < 61; so, 64 is more than enough for default value.
-    ObjServerServerItem[] result;
+    OS_ServerItem[] result;
     result.length = 64;
-    
+
     bool processed = false;
     // count of parsed values
     int count = 0;
     // current position in message
     int i = 0;
-    while(i < data.length) {
-      // TODO: readUInt16BE
-      int id = data[i]*256 + data[i + 1];
-      int value_length = data[i + 2];
-    
-      // TODO: think about safety
-      i += 3;
-      ubyte[] _value = data[i..i + value_length];
-      //writeln("server item value: ", _value);
-      i += value_length;
+    while(data.length > 0) {
+      ushort id = data.read!ushort();
+      ubyte value_length = data.read!ubyte();
+      ubyte[] _value = data[0..value_length];
 
-      ObjServerServerItem _result;
+      // delete bytes from array
+      if (data.length > value_length) {
+        data = data[value_length..$];
+      } else {
+        data = [];
+      }
+
+      OS_ServerItem _result;
       _result.id = id;
       _result.length = value_length;
       _result.value = _value;
@@ -155,34 +164,30 @@ class ObjectServerProtocol {
     return result;
   }
 
-  private static ObjServerDatapointDescription[] _processCommonDatapointDescriptions(ubyte[] data) {
-    ObjServerDatapointDescription[] result;
+  private static OS_DatapointDescription[] _processCommonDatapointDescriptions(ubyte[] data) {
+    OS_DatapointDescription[] result;
     result.length = 64;
-    
+
     bool processed = false;
     // count of parsed values
     int count = 0;
     // current position in message
-    int i = 0;
-    while(i < data.length) {
-      // TODO: readUInt16BE
-      int id = data[i]*256 + data[i + 1];
-      int value_type = data[i + 2];
-      int config_flags = data[i + 3];
-      int dpt = data[i + 4];
-    
-      i += 5;
+    while(data.length > 0) {
+      ushort id = data.read!ushort();
+      ubyte value_type = data.read!ubyte();
+      ubyte config_flags = data.read!ubyte();
+      ubyte dpt = data.read!ubyte();
 
-      ObjServerDatapointDescription _result;
+      OS_DatapointDescription _result;
       _result.id = id;
-      _result.flags.priority = to!ObjServerDatapointPriority(config_flags & 0x03);
+      _result.flags.priority = to!OS_DatapointPriority(config_flags & 0x03);
       _result.flags.communication = cast(bool)(config_flags & 0x04);
       _result.flags.read = cast(bool)(config_flags & 0x08);
       _result.flags.write = cast(bool)(config_flags & 0x10);
       _result.flags.write = cast(bool)(config_flags & 0x20);
       _result.flags.read_on_init = cast(bool)(config_flags & 0x40);
       _result.flags.update = cast(bool)(config_flags & 0x80);
-      _result.type = to!ObjServerDatapointType(dpt);
+      _result.type = to!OS_DatapointType(dpt);
 
       // push to result array
       result[count] = _result;
@@ -194,7 +199,7 @@ class ObjectServerProtocol {
     return result;
   }
 
-  private static ObjServerDatapointValue[] _processCommonDatapointValues(ubyte[] data) {
+  private static OS_DatapointValue[] _processCommonDatapointValues(ubyte[] data) {
     // max size of baos message is 250 by default(ServerItems.MaxBufferSize)
     // 250 - 6[header] - ((2[id] + 1[state] + 1[length byte])[datapoint header] + <length>)*x > 0
     // (4 + length)*x < 244
@@ -202,26 +207,28 @@ class ObjectServerProtocol {
     // so
     // 4*x < 244
     // x < 61; so, 64 is more than enough for default value.
-    ObjServerDatapointValue[] result;
+    OS_DatapointValue[] result;
     result.length = 64;
-    
+
     bool processed = false;
     // count of parsed values
     int count = 0;
     // current position in message
     int i = 0;
-    while(i < data.length) {
-      // TODO: readUInt16BE
-      ushort id = data[i]*256 + data[i + 1];
-      ubyte value_state = data[i + 2];
-      ubyte value_length = data[i + 3];
-    
-      // TODO: think about safety
-      i += 4;
-      ubyte[] _value = data[i..i + value_length];
-      i += value_length;
+    while(data.length > 0) {
+      ushort id = data.read!ushort();
+      ubyte value_state = data.read!ubyte();
+      ubyte value_length = data.read!ubyte();
 
-      ObjServerDatapointValue _result;
+      ubyte[] _value = data[0..value_length];
+
+      if (data.length > value_length) {
+        data = data[value_length..$];
+      } else {
+        data = [];
+      }
+
+      OS_DatapointValue _result;
       _result.id = id;
       _result.state = value_state;
       _result.length = value_length;
@@ -237,34 +244,34 @@ class ObjectServerProtocol {
     return result;
   }
 
-  private static ObjServerServerItem[] _processServerItemRes(ubyte[] data) {
+  private static OS_ServerItem[] _processServerItemRes(ubyte[] data) {
     // start dp[2], number of dp[2], (err[1]/value[~varies])
-    int start = data[0]*256 + data[1];
-    int number = data[2]*256 + data[3];
+    ushort start = data.read!ushort();
+    ushort number = data.read!ushort();
     if (number == 0) {
       // TODO: error handling
       throw new Exception(format("%d", data[4]));
     }
 
-    return _processServerItems(data[4..$]);
+    return _processServerItems(data);
   }
 
-  private static ObjServerDatapointValue[] _processDatapointValueRes(ubyte[] data) {
+  private static OS_DatapointValue[] _processDatapointValueRes(ubyte[] data) {
     // start dp[2], number of dp[2], (err[1]/value[~varies])
-    int start = data[0]*256 + data[1];
-    int number = data[2]*256 + data[3];
+    ushort start = data.read!ushort();
+    ushort number = data.read!ushort();
     if (number == 0) {
       // TODO: error handling
       throw new Exception(format("%d", data[4]));
     }
 
-    return _processCommonDatapointValues(data[4..$]);
+    return _processCommonDatapointValues(data);
   }
 
-  private static ObjServerDatapointDescription[] _processDatapointDescriptionRes(ubyte[] data) {
+  private static OS_DatapointDescription[] _processDatapointDescriptionRes(ubyte[] data) {
     // start dp[2], number of dp[2], (err[1]/value[~varies])
-    int start = data[0]*256 + data[1];
-    int number = data[2]*256 + data[3];
+    int start = data.read!ushort();
+    int number = data.read!ushort();
     if (number == 0) {
       throw new Exception(format("%d", data[4]));
     }
@@ -272,154 +279,141 @@ class ObjectServerProtocol {
     return _processCommonDatapointDescriptions(data[4..$]);
   }
 
-  static ObjectServerMessage processIncomingMessage(ubyte[] data) {
-    ObjectServerMessage result;
-    int mainService = data[0];
-    int subService = data[1];
-    if (mainService == ObjServerMainService) {
-      switch(subService) {
-        case ObjServerServices.GetServerItemRes:
-          //writeln("GetServerItemRes");
-          result.direction = ObjServerMessageDirection.response;
-          result.service= ObjServerServices.GetServerItemRes;
-          result.server_items = _processServerItemRes(data[2..$]);
-          break;
-        case ObjServerServices.ServerItemInd:
-          //writeln("ServerItemInd");
-          result.direction = ObjServerMessageDirection.indication;
-          result.service= ObjServerServices.ServerItemInd;
-          result.server_items = _processServerItemRes(data[2..$]);
-          break;
-        case ObjServerServices.GetDatapointDescriptionRes:
-          //writeln("GetDatapointDescriptionRes");
-          result.direction = ObjServerMessageDirection.response;
-          result.service= ObjServerServices.GetDatapointDescriptionRes;
-          try {
+  static OS_Message processIncomingMessage(ubyte[] data) {
+    OS_Message result;
+    ubyte mainService = data.read!ubyte();
+    ubyte subService = data.read!ubyte();
+    try {
+      if (mainService == OS_MainService) {
+        switch(subService) {
+          case OS_Services.GetServerItemRes:
+            //writeln("GetServerItemRes");
+            result.direction = OS_MessageDirection.response;
+            result.service= OS_Services.GetServerItemRes;
+            result.server_items = _processServerItemRes(data);
+            break;
+          case OS_Services.ServerItemInd:
+            //writeln("ServerItemInd");
+            result.direction = OS_MessageDirection.indication;
+            result.service= OS_Services.ServerItemInd;
+            result.server_items = _processServerItemRes(data);
+            break;
+          case OS_Services.GetDatapointDescriptionRes:
+            //writeln("GetDatapointDescriptionRes");
+            result.direction = OS_MessageDirection.response;
+            result.service= OS_Services.GetDatapointDescriptionRes;
             result.success = true;
-            result.datapoint_descriptions = _processDatapointDescriptionRes(data[2..$]);
-          } catch(Exception e) {
-            result.success = false;
-            result.error = e;
-          }
-          break;
-        case ObjServerServices.GetDatapointValueRes:
-          //writeln("GetDatapointValueRes");
-          result.direction = ObjServerMessageDirection.response;
-          result.service= ObjServerServices.GetDatapointValueRes;
-          result.datapoint_values = _processDatapointValueRes(data[2..$]);
-          break;
-        case ObjServerServices.SetDatapointValueRes:
-          writeln("SetDatapointValueRes:", data);
-          result.direction = ObjServerMessageDirection.response;
-          result.service= ObjServerServices.GetDatapointValueRes;
-          // TODO: parse response
-          break;
-        case ObjServerServices.DatapointValueInd:
-          //writeln("DatapointValueInd");
-          result.service= ObjServerServices.DatapointValueInd;
-          result.direction = ObjServerMessageDirection.indication;
-          result.datapoint_values = _processDatapointValueRes(data[2..$]);
-          break;
-        default:
-          break;
+            result.datapoint_descriptions = _processDatapointDescriptionRes(data);
+            break;
+          case OS_Services.GetDatapointValueRes:
+            //writeln("GetDatapointValueRes");
+            result.direction = OS_MessageDirection.response;
+            result.service= OS_Services.GetDatapointValueRes;
+            result.datapoint_values = _processDatapointValueRes(data);
+            break;
+          case OS_Services.SetDatapointValueRes:
+            writeln("SetDatapointValueRes:", data);
+            result.direction = OS_MessageDirection.response;
+            result.service= OS_Services.GetDatapointValueRes;
+            // TODO: parse response
+            break;
+          case OS_Services.DatapointValueInd:
+            //writeln("DatapointValueInd");
+            result.service= OS_Services.DatapointValueInd;
+            result.direction = OS_MessageDirection.indication;
+            result.datapoint_values = _processDatapointValueRes(data);
+            break;
+          default:
+            break;
+        }
       }
+    } catch(Exception e) {
+      result.success = false;
+      result.error = e;
     }
     return result;
   }
 
-  static ubyte[] GetDatapointDescriptionReq(int start, int number = 1) {
+  static ubyte[] GetDatapointDescriptionReq(ushort start, ushort number = 1) {
     ubyte[] result;
     // max len
     result.length = 6;
-    ubyte main = ObjServerMainService;
-    ubyte service = ObjServerServices.GetDatapointDescriptionReq;
-    result[0] = main;
-    result[1] = service;
+    // service header
+    result.write!ubyte(OS_MainService, 0);
+    result.write!ubyte(OS_Services.GetDatapointDescriptionReq, 1);
     // start BE
-    result[2] = cast(ubyte) (start/256);
-    result[3] = cast(ubyte) start%256;
+    result.write!ushort(start, 2);
     // number BE
-    result[4] = cast(ubyte) (number/256);
-    result[5] = cast(ubyte) number%256;
+    result.write!ushort(number, 4);
 
     return result;
   }
 
-  static ubyte[] GetDatapointValueReq(int start, int number = 1, ObjServerDatapointValueFilter filter = ObjServerDatapointValueFilter.all) {
+  static ubyte[] GetDatapointValueReq(ushort start, ushort number = 1, OS_DatapointValueFilter filter = OS_DatapointValueFilter.all) {
     ubyte[] result;
     // max len
     result.length = 7;
-    ubyte main = ObjServerMainService;
-    ubyte service = ObjServerServices.GetDatapointValueReq;
-    result[0] = main;
-    result[1] = service;
+    // service header
+    result.write!ubyte(OS_MainService, 0);
+    result.write!ubyte(OS_Services.GetDatapointValueReq, 1);
     // start BE
-    result[2] = cast(ubyte) (start/256);
-    result[3] = cast(ubyte) start%256;
+    result.write!ushort(start, 2);
     // number BE
-    result[4] = cast(ubyte) (number/256);
-    result[5] = cast(ubyte) number%256;
-    result[6] = cast(ubyte) filter;
+    result.write!ushort(number, 4);
+    result.write!ubyte(cast(ubyte)filter, 6);
 
     return result;
   }
 
-  static ubyte[] GetServerItemReq(int start, int number = 1) {
+  static ubyte[] GetServerItemReq(ushort start, ushort number = 1) {
     ubyte[] result;
     // max len
     result.length = 6;
-    ubyte main = ObjServerMainService;
-    ubyte service = ObjServerServices.GetServerItemReq;
-    result[0] = main;
-    result[1] = service;
+    // service header
+    result.write!ubyte(OS_MainService, 0);
+    result.write!ubyte(OS_Services.GetServerItemReq, 1);
     // start BE
-    result[2] = cast(ubyte) (start/256);
-    result[3] = cast(ubyte) start%256;
+    result.write!ushort(start, 2);
     // number BE
-    result[4] = cast(ubyte) (number/256);
-    result[5] = cast(ubyte) number%256;
+    result.write!ushort(number, 4);
 
     return result;
   }
-  static ubyte[] SetDatapointValueReq(ushort start, ObjServerDatapointValue[] values) {
+  static ubyte[] SetDatapointValueReq(ushort start, OS_DatapointValue[] values) {
     ubyte[] result;
     // max len
-    int valueLen = 0;
-    foreach(ObjServerDatapointValue value; values) {
+    ubyte header_length = 6;
+    ubyte value_length = 0;
+    foreach(OS_DatapointValue value; values) {
       // id, cmd, len, value
-      valueLen += 2 + 1 + 1+ value.value.length;
+      value_length += ushort.sizeof + ubyte.sizeof + ubyte.sizeof+ value.value.length;
     }
-    result.length = 6 + valueLen;
+    result.length = header_length + value_length;
 
-    // fill
-    ubyte main = ObjServerMainService;
-    ubyte service = ObjServerServices.SetDatapointValueReq;
-    result[0] = main;
-    result[1] = service;
+    // service header
+    result.write!ubyte(OS_MainService, 0);
+    result.write!ubyte(OS_Services.GetDatapointValueReq, 1);
     // start BE
-    result[2] = cast(ubyte) (start/256);
-    result[3] = cast(ubyte) start%256;
+    result.write!ushort(start, 2);
     // number BE
     ushort number = cast(ushort) values.length;
-    result[4] = cast(ubyte) (number/256);
-    result[5] = cast(ubyte) number%256;
-    
+    result.write!ushort(number, 4);
+
     // current position
-    int c = 6; 
-    foreach(ObjServerDatapointValue value; values) {
-      // end position of value chunk
-      result[c] = cast(ubyte) (value.id/256);
-      result[c+1] = cast(ubyte) value.id%256;
+    int c = header_length; 
+    foreach(OS_DatapointValue value; values) {
+      result.write!ushort(value.id, c);
       // command: set and send
-      result[c+2] = 3;
-      result[c+3] = cast(ubyte) value.value.length;
-      int e = c+4 + cast(int) value.value.length;
-      result[c+4..e] = value.value[0..$];
-      c = e;
+      // TODO: command in params
+      result.write!ubyte(3, c + 2);
+      result.write!ubyte(cast(ubyte) value.value.length, c + 3);
+
+      // end position of value chunk
+      int end = c+4 + cast(int) value.value.length;
+      result[c+4..end] = value.value[0..$];
+      c = end;
     }
-    writeln(result);
 
     return result;
   }
-
 }

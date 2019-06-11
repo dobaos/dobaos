@@ -19,9 +19,9 @@ void main()
 
   // maximum buffer size
   SI_currentBufferSize = 0;
-  if (serverItemMessage.service == ObjServerServices.GetServerItemRes) {
+  if (serverItemMessage.service == OS_Services.GetServerItemRes) {
     writeln("server items: good");
-    foreach(ObjServerServerItem si; serverItemMessage.server_items) {
+    foreach(OS_ServerItem si; serverItemMessage.server_items) {
       writeln(si);
       // maximum buffer size
       if (si.id == 14) {
@@ -31,9 +31,9 @@ void main()
     }
   }
   /***
-    if (datapointValueMessage.service == ObjServerServices.GetDatapointValueRes) {
+    if (datapointValueMessage.service == OS_Services.GetDatapointValueRes) {
     writeln("values: good");
-    foreach(ObjServerDatapointValue dv; datapointValueMessage.datapoint_values) {
+    foreach(OS_DatapointValue dv; datapointValueMessage.datapoint_values) {
     writeln(dv);
     }
     }
@@ -51,7 +51,7 @@ void main()
     auto descr = baos.GetDatapointDescriptionReq(start, number);
     if (descr.success) {
       writeln("descriptions: good", descr.datapoint_descriptions);
-      foreach(ObjServerDatapointDescription dd; descr.datapoint_descriptions) {
+      foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
         writeln(dd.id, "[", dd.type, "] ");
       }
     } else {
@@ -63,14 +63,14 @@ void main()
 
   // process incoming values
   while(true) {
-    ObjectServerMessage ind = baos.processInd();
-    if (ind.service != ObjServerServices.unknown) {
+    OS_Message ind = baos.processInd();
+    if (ind.service != OS_Services.unknown) {
       writeln("here comes message[ind]: ");
       // example
-      foreach(ObjServerDatapointValue dv; ind.datapoint_values) {
+      foreach(OS_DatapointValue dv; ind.datapoint_values) {
         /****
           if (dv.id == 10) {
-          ObjServerDatapointValue[] newVal;
+          OS_DatapointValue[] newVal;
           newVal.length = 1;
           newVal[0].id = 11;
           newVal[0].value.length = 1;
