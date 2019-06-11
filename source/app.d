@@ -47,15 +47,14 @@ void main()
     if (MAX_DATAPOINT_NUM - start <= number) {
       number = cast(ushort) (MAX_DATAPOINT_NUM - start + 1);
     }
-    writeln("start-number: ", start, "-", number);
+    //writeln("start-number: ", start, "-", number);
     auto descr = baos.GetDatapointDescriptionReq(start, number);
     if (descr.success) {
-      writeln("descriptions: good", descr.datapoint_descriptions);
       foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
-        writeln(dd.id, "[", dd.type, "] ");
+        writeln("here comes description #", dd.id, "[", dd.type, "] ");
       }
     } else {
-      writeln("error ocurred: ", descr.error.message);
+      writeln("here comes error:", start, "-", number,": ", descr.error.message);
     }
     start += number;
   }

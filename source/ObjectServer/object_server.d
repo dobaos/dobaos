@@ -250,7 +250,7 @@ class OS_Protocol {
     ushort number = data.read!ushort();
     if (number == 0) {
       // TODO: error handling
-      throw new Exception(format("%d", data[4]));
+      throw new Exception(format("%d", data[0]));
     }
 
     return _processServerItems(data);
@@ -262,7 +262,7 @@ class OS_Protocol {
     ushort number = data.read!ushort();
     if (number == 0) {
       // TODO: error handling
-      throw new Exception(format("%d", data[4]));
+      throw new Exception(format("%d", data[0]));
     }
 
     return _processCommonDatapointValues(data);
@@ -273,10 +273,10 @@ class OS_Protocol {
     int start = data.read!ushort();
     int number = data.read!ushort();
     if (number == 0) {
-      throw new Exception(format("%d", data[4]));
+      throw new Exception(format("%d", data[0]));
     }
 
-    return _processCommonDatapointDescriptions(data[4..$]);
+    return _processCommonDatapointDescriptions(data);
   }
 
   static OS_Message processIncomingMessage(ubyte[] data) {

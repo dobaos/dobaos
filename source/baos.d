@@ -131,13 +131,13 @@ class Baos {
     result.service = OS_Services.unknown;
     return result;
   }
-  public OS_Message GetDatapointDescriptionReq(uint start, uint number = 1) {
+  public OS_Message GetDatapointDescriptionReq(ushort start, ushort number = 1) {
     return commonRequest(OS_Protocol.GetDatapointDescriptionReq(start, number));
   }
-  public OS_Message GetServerItemReq(uint start, uint number = 1) {
+  public OS_Message GetServerItemReq(ushort start, ushort number = 1) {
     return commonRequest(OS_Protocol.GetServerItemReq(start, number));
   }
-  public OS_Message GetDatapointValueReq(uint start, uint number = 1) {
+  public OS_Message GetDatapointValueReq(ushort start, ushort number = 1) {
     return commonRequest(OS_Protocol.GetDatapointValueReq(start, number));
   }
   public OS_Message SetDatapointValueReq(ushort start, OS_DatapointValue[] values) {
