@@ -3,13 +3,20 @@ import core.thread;
 import std.stdio;
 import std.bitmanip;
 import std.range.primitives : empty;
+import std.json;
+import std.functional;
 
+import tinyredis;
+import tinyredis.subscriber;
 
 import baos;
 import object_server;
 
 const ushort MAX_DATAPOINT_NUM = 1000;
 ushort SI_currentBufferSize;
+
+Redis redis;
+Subscriber sub;
 
 void main()
 {
@@ -59,12 +66,38 @@ void main()
     start += number;
   }
 
+  void handleMessage(string channel, string message)
+  {
+    writefln("Redis channel '%s': %s", channel, message);
+    try {
+      JSONValue j = parseJSON(message);
+      writeln("parsed");
+      // TODO: parse request, make things, then send response
+      // TODO: move to different source file
+
+      // just example
+      auto descr = baos.GetDatapointDescriptionReq(1, 11);
+      if (descr.success) {
+        foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
+          writeln("here comes description #", dd.id, "[", dd.type, "] ");
+        }
+      } else {
+        writeln("here comes error:", start, "-", number,": ", descr.error.message);
+      }
+    } catch(Exception e) {
+      writeln("error parsing json: %s ", e.msg);
+    }
+  }
+
+  Subscriber _sub = new Subscriber();
+  _sub.subscribe("hello", toDelegate(&handleMessage));
+
+
 
   // process incoming values
   while(true) {
     OS_Message ind = baos.processInd();
     if (ind.service != OS_Services.unknown) {
-      writeln("here comes message[ind]: ");
       // example
       foreach(OS_DatapointValue dv; ind.datapoint_values) {
         /****
@@ -84,5 +117,7 @@ void main()
     Thread.sleep(1.msecs);
     // process redis messages here?
     // TODO: simple messages as a model; test
+    _sub.processMessages();
   }
 }
+

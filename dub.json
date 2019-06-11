@@ -3,7 +3,8 @@
 		"undefeated"
 	],
   "dependencies": {
-    "serialport": "~>2.2.0"
+    "serialport": "~>2.2.0",
+    "tinyredis": "~>2.2.0"
   },
 	"copyright": "Copyright © 2019, undefeated",
 	"description": "A minimal D application.",
