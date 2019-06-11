@@ -122,7 +122,7 @@ class Baos {
       com.write(buffer);
       while(!responseReceived) {
         processIncomingData();
-        Thread.sleep(1.msecs);
+        Thread.sleep(6.msecs);
       }
       return _res;
     }

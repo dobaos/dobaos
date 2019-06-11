@@ -114,7 +114,8 @@ void main()
         writeln("#d ", dv.id, "=", dv.value);
       }
     }
-    Thread.sleep(1.msecs);
+    // TODO: calculate approximate sleep time depending on baudrate
+    Thread.sleep(6.msecs);
     // process redis messages here?
     // TODO: simple messages as a model; test
     _sub.processMessages();
