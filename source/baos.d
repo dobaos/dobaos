@@ -8,7 +8,6 @@ import serialport;
 import ft12;
 import object_server;
 import datapoints;
-import ipc;
 
 class Baos {
   private SerialPortNonBlk com;
@@ -99,6 +98,7 @@ class Baos {
       return result;
     }
 
+    // TODO: return null?
     OS_Message result;
     result.service = OS_Services.unknown;
 
