@@ -16,12 +16,10 @@ class Baos {
   private FT12Helper ft12;
   private FT12FrameParity currentParity = FT12FrameParity.unknown;
 
-  // emitter for received objectserver messages(ind)
-
   // var to store result for last response
-  OS_Message _res;
+  private OS_Message _res;
   // and indications. 
-  OS_Message[] _ind;
+  private OS_Message[] _ind;
 
   private bool resetAckReceived = false;
   private bool ackReceived = true;

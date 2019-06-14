@@ -309,6 +309,7 @@ class OS_Protocol {
             //writeln("GetDatapointValueRes");
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.GetDatapointValueRes;
+            result.success = true;
             result.datapoint_values = _processDatapointValueRes(data);
             break;
           case OS_Services.SetDatapointValueRes:
