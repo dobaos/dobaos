@@ -6,6 +6,8 @@ import std.range.primitives : empty;
 import std.json;
 import std.functional;
 
+import std.datetime.stopwatch;
+
 import baos;
 import datapoints;
 import object_server;
@@ -18,7 +20,7 @@ void main()
   auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, "hello", "friend");
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     writeln("now handle request in main app");
-    
+
     JSONValue res;
 
     // TODO: switch(method) ..... send response; default: unknown method
@@ -28,12 +30,19 @@ void main()
         res["success"] = true;
         writeln(jreq["payload"]);
         writeln(cast(ushort) jreq["payload"].integer);
+        StopWatch sw;
+        sw.start();
         res["payload"] = sdk.getValue(cast(ushort) jreq["payload"].integer);
+        writeln("is time: ", sw.peek());
         sendResponse(res);
         break;
       default:
         res["success"] = false;
+        StopWatch sw;
+        sw.start();
+        writeln("some other stuff");
         sendResponse(res);
+        writeln("is time: ", sw.peek());
         break;
     }
   }

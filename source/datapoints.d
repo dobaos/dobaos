@@ -8,6 +8,27 @@ import std.math;
 import std.bitmanip;
 import std.range.primitives : empty;
 
+enum DatapointType {
+  unknown,
+  dpt1,
+  dpt2,
+  dpt3,
+  dpt4,
+  dpt5,
+  dpt6,
+  dpt7,
+  dpt8,
+  dpt9,
+  dpt10,
+  dpt11,
+  dpt12,
+  dpt13,
+  dpt14,
+  dpt15,
+  dpt16,
+  dpt17,
+  dpt18
+}
 
 class DPT9 {
   static public float toFloat(ubyte[] raw) {
@@ -22,6 +43,13 @@ class DPT9 {
     }
 
     float value = (0.01 * mant) * pow(2, exp);
+    return value;
+  }
+}
+class DPT1 {
+  static public bool toBoolean(ubyte[] raw) {
+    assert(raw.length == 1);
+    auto value = raw.read!bool();
     return value;
   }
 }

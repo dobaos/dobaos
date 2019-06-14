@@ -18,6 +18,17 @@ import baos;
 
 const ushort MAX_DATAPOINT_NUM = 1000;
 
+struct SdkDatapointValue {
+  ushort id;
+  string raw;
+  DatapointType dpt;
+  union {
+    bool boolean;
+    uint u_int;
+    float floating;
+  }
+}
+
 class DatapointSdk {
   private ushort SI_currentBufferSize;
   private OS_DatapointDescription[ushort] descriptions;
@@ -39,10 +50,14 @@ class DatapointSdk {
 
     return res;
   }
+
   public void processInd() {
     OS_Message ind = baos.processInd();
-    if (ind.service != OS_Services.unknown) {
+    if (ind.service == OS_Services.DatapointValueInd) {
+      SdkDatapointValue[] result;
+      result.length = ind.datapoint_values.length;
       // example
+      auto count = 0;
       foreach(OS_DatapointValue dv; ind.datapoint_values) {
         /****
           if (dv.id == 10) {
@@ -57,16 +72,28 @@ class DatapointSdk {
           } ****/
 
         // convert to base type
+        SdkDatapointValue _res;
+        _res.id = dv.id;
         switch(descriptions[dv.id].type) {
+          case OS_DatapointType.dpt1:
+            _res.dpt = DatapointType.dpt1;
+            _res.boolean = DPT1.toBoolean(dv.value);
+            writeln("boo: ", _res.id, "=", _res.boolean);
+            break;
           case OS_DatapointType.dpt9:
-            writeln("#d ", dv.id, "=", DPT9.toFloat(dv.value));
+            _res.dpt = DatapointType.dpt9;
+            _res.floating = DPT9.toFloat(dv.value);
+            writeln("float: ", _res.id, "=", _res.floating);
             break;
           default:
             writeln("unknown yet dtp");
             break;
         }
+        result[count] = _res;
+        count++;
         // TODO: create ind object {id, value, raw} and return
       }
+      result.length = count;
     }
   }
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {
