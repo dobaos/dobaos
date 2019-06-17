@@ -28,11 +28,9 @@ void main()
     switch(method) {
       case "get value":
         res["success"] = true;
-        writeln(jreq["payload"]);
-        writeln(cast(ushort) jreq["payload"].integer);
         StopWatch sw;
         sw.start();
-        res["payload"] = sdk.getValue(cast(ushort) jreq["payload"].integer);
+        res["payload"] = sdk.getValue(jreq["payload"]);
         writeln("is time: ", sw.peek());
         sendResponse(res);
         break;

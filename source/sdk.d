@@ -9,6 +9,7 @@ module sdk;
 import std.stdio;
 import std.bitmanip;
 import std.range.primitives : empty;
+import std.json;
 
 import object_server;
 import datapoints;
@@ -18,34 +19,70 @@ import baos;
 
 const ushort MAX_DATAPOINT_NUM = 1000;
 
-struct SdkDatapointValue {
-  ushort id;
-  string raw;
-  DatapointType dpt;
-  union {
-    bool boolean;
-    uint u_int;
-    float floating;
-  }
-}
-
 class DatapointSdk {
   private ushort SI_currentBufferSize;
   private OS_DatapointDescription[ushort] descriptions;
+  private JSONValue convert2JSONValue(OS_DatapointValue dv) {
+    // TODO: get dpt type from descriptions
+    // TODO: convert
+    JSONValue res;
+    res["id"] = dv.id;
+    switch(descriptions[dv.id].type) {
+      case OS_DatapointType.dpt1:
+        res["value"] = DPT1.toBoolean(dv.value);
+        break;
+      case OS_DatapointType.dpt9:
+        res["value"] = DPT9.toFloat(dv.value);
+        break;
+      default:
+        writeln("unknown yet dtp");
+        break;
+    }
+
+    return res;
+  }
+  private OS_DatapointValue convert2OSValue(JSONValue value) {
+    // TODO: get dpt type from descriptions
+    // TODO: convert
+    OS_DatapointValue res;
+    return res;
+  }
   private Baos baos;
   // TODO: methods to work with baos
-  public ubyte[] getValue(ushort id) {
-    ubyte[] res;
-    auto val = baos.GetDatapointValueReq(id);
-    writeln(val);
-    if (val.success) {
-      writeln("values: good");
-      res = val.datapoint_values[0].value;
-      /**foreach(OS_DatapointValue dv; val.datapoint_values) {
-        writeln(dv);
-        }**/
+  public JSONValue getValue(JSONValue payload) {
+    JSONValue res;
+    if (payload.type() == JSONType.integer) {
+      writeln("is integer");
+      ushort id = cast(ushort) payload.integer;
+      auto val = baos.GetDatapointValueReq(id);
+      writeln(val);
+      if (val.success) {
+        assert(val.datapoint_values.length == 1);
+        res = convert2JSONValue(val.datapoint_values[0]);
+      } else {
+        writeln("values: bad:: ", val.error.message);
+      }
+    } else if (payload.type() == JSONType.array) {
+      // TODO: check every element if it is integer
+      // TODO: then calculate getValue map [{id, number}...]
+      // TODO: get values, convert and return
+      writeln("is array");
+      // assert
+      foreach(JSONValue id; payload.array) {
+        assert(id.type() == JSONType.integer);
+      }
+
+      res = parseJSON("[]");
+      res.array.length = payload.array.length;
+      
+      auto count = 0;
+      // temporary, refactor
+      foreach(JSONValue id; payload.array) {
+        res.array[count] = getValue(id);
+        count += 1;
+      }
     } else {
-      writeln("values: bad:: ", val.error.message);
+      throw new Exception("unknown payload type.");
     }
 
     return res;
@@ -54,7 +91,7 @@ class DatapointSdk {
   public void processInd() {
     OS_Message ind = baos.processInd();
     if (ind.service == OS_Services.DatapointValueInd) {
-      SdkDatapointValue[] result;
+      JSONValue[] result;
       result.length = ind.datapoint_values.length;
       // example
       auto count = 0;
@@ -72,18 +109,16 @@ class DatapointSdk {
           } ****/
 
         // convert to base type
-        SdkDatapointValue _res;
-        _res.id = dv.id;
+        JSONValue _res;
+        _res["id"] = dv.id;
         switch(descriptions[dv.id].type) {
           case OS_DatapointType.dpt1:
-            _res.dpt = DatapointType.dpt1;
-            _res.boolean = DPT1.toBoolean(dv.value);
-            writeln("boo: ", _res.id, "=", _res.boolean);
+            _res["value"] = DPT1.toBoolean(dv.value);
+            writeln("boo: ", _res["id"], "=", _res["value"]);
             break;
           case OS_DatapointType.dpt9:
-            _res.dpt = DatapointType.dpt9;
-            _res.floating = DPT9.toFloat(dv.value);
-            writeln("float: ", _res.id, "=", _res.floating);
+            _res["value"] = DPT9.toFloat(dv.value);
+            writeln("float: ", _res["id"], "=", _res["value"]);
             break;
           default:
             writeln("unknown yet dtp");
