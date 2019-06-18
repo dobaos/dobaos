@@ -24,18 +24,30 @@ void main()
     JSONValue res;
 
     // TODO: switch(method) ..... send response; default: unknown method
+    auto jmethod = ("method" in jreq);
+    if (jmethod is null) {
+      writeln("there is no method field in json req");
+      res["success"] = false;
+      return;
+    }
+    auto jpayload = ("payload" in jreq);
+    if (jpayload is null) {
+      writeln("there is no payload field in json req");
+      return;
+    }
+
     string method = ("method" in jreq).str;
     switch(method) {
       case "get value":
-	try {
+        try {
           res["success"] = true;
           StopWatch sw;
           sw.start();
           res["payload"] = sdk.getValue(jreq["payload"]);
           writeln("is time: ", sw.peek());
           sendResponse(res);
-	} catch(Exception e) {
-	  res["success"] = false;
+        } catch(Exception e) {
+          res["success"] = false;
           res["payload"] = e.message;
           sendResponse(res);
         }
@@ -44,9 +56,7 @@ void main()
         res["success"] = false;
         StopWatch sw;
         sw.start();
-        writeln("some other stuff");
         sendResponse(res);
-        writeln("is time: ", sw.peek());
         break;
     }
   }

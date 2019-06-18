@@ -10,6 +10,7 @@ import std.stdio;
 import std.bitmanip;
 import std.range.primitives : empty;
 import std.json;
+import std.base64;
 
 import object_server;
 import datapoints;
@@ -36,6 +37,9 @@ class DatapointSdk {
     }
 
     auto dpt = descriptions[dv.id].type;
+    // raw value encoded in base64
+    res["raw"] = Base64.encode(dv.value);
+    // converted value
     switch(dpt) {
       case OS_DatapointType.dpt1:
         res["value"] = DPT1.toBoolean(dv.value);
@@ -72,8 +76,8 @@ class DatapointSdk {
         res = convert2JSONValue(val.datapoint_values[0]);
       } else {
         writeln("values: bad:: ", val.error.message);
-	// TODO: throw error
-	throw new Exception(cast(string) val.error.message);
+        // TODO: throw error
+        throw new Exception(cast(string) val.error.message);
       }
     } else if (payload.type() == JSONType.array) {
       // TODO: check every element if it is integer
@@ -87,7 +91,7 @@ class DatapointSdk {
 
       res = parseJSON("[]");
       res.array.length = payload.array.length;
-      
+
       auto count = 0;
       // temporary, refactor
       foreach(JSONValue id; payload.array) {

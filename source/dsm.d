@@ -51,15 +51,12 @@ class Dsm {
           return;
         }
         // check if request has response_channel field
-        auto response_channel = ("response_channel" in jreq).str;
-        // in docs ("key" in JSONValue) should return null if there is not
-        // but program exits with code 11
-        // when response_channel has no value
-        // TODO: study and make correct checking
-        if (!response_channel) {
+        auto jresponse_channel = ("response_channel" in jreq);
+        if (jresponse_channel is null) {
+          writeln("no response_channel field in json request");
           return;
         }
-
+        auto response_channel = ("response_channel" in jreq).str;
         writeln("response_channel", response_channel);
 
         void sendResponse(JSONValue res) {
