@@ -27,7 +27,16 @@ class DatapointSdk {
     // TODO: convert
     JSONValue res;
     res["id"] = dv.id;
-    switch(descriptions[dv.id].type) {
+    // assert that description can be found
+    OS_DatapointDescription *p;
+    p = (dv.id in descriptions);
+    if (p is null) {
+      writeln("Datapoint can't be found");
+      throw new Exception("Datapoint can't be found");
+    }
+
+    auto dpt = descriptions[dv.id].type;
+    switch(dpt) {
       case OS_DatapointType.dpt1:
         res["value"] = DPT1.toBoolean(dv.value);
         break;
@@ -38,13 +47,15 @@ class DatapointSdk {
         writeln("unknown yet dtp");
         break;
     }
-
     return res;
+
   }
   private OS_DatapointValue convert2OSValue(JSONValue value) {
     // TODO: get dpt type from descriptions
     // TODO: convert
     OS_DatapointValue res;
+    // TODO: check type. array=> set multiple; object=>set one valu; default => err
+    // TODO: assert that "value" or "raw" field is present value object
     return res;
   }
   private Baos baos;
@@ -61,6 +72,8 @@ class DatapointSdk {
         res = convert2JSONValue(val.datapoint_values[0]);
       } else {
         writeln("values: bad:: ", val.error.message);
+	// TODO: throw error
+	throw new Exception(cast(string) val.error.message);
       }
     } else if (payload.type() == JSONType.array) {
       // TODO: check every element if it is integer

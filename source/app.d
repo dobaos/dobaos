@@ -27,12 +27,18 @@ void main()
     string method = ("method" in jreq).str;
     switch(method) {
       case "get value":
-        res["success"] = true;
-        StopWatch sw;
-        sw.start();
-        res["payload"] = sdk.getValue(jreq["payload"]);
-        writeln("is time: ", sw.peek());
-        sendResponse(res);
+	try {
+          res["success"] = true;
+          StopWatch sw;
+          sw.start();
+          res["payload"] = sdk.getValue(jreq["payload"]);
+          writeln("is time: ", sw.peek());
+          sendResponse(res);
+	} catch(Exception e) {
+	  res["success"] = false;
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
         break;
       default:
         res["success"] = false;
