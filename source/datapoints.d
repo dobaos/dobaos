@@ -4,6 +4,7 @@ TODO: convert funcs
 
 module datapoints;
 
+import std.algorithm;
 import std.math;
 import std.bitmanip;
 import std.range.primitives : empty;
@@ -45,11 +46,37 @@ class DPT9 {
     float value = (0.01 * mant) * pow(2, exp);
     return value;
   }
+  static public ubyte[] toUbyte(float value) {
+    auto sign = 0x00;
+    /***
+    float exp = floor(max((log(abs(value) * 100) / log(2)) - 10, 0));
+    float mant = (value * 100) / (1 << cast(int)exp);
+
+    if (value < 0) {
+      sign = 0x01;
+      mant = (~(mant*-1) + 1) & 0x07FF;
+    }
+
+    value = round((sign << 15) | (exp << 11) | mant) & 0xFFFF;
+    **/
+
+    ubyte[] res;
+    res.length = 2;
+    res.write!ushort(42, 0);
+
+    return res;
+  }
 }
 class DPT1 {
   static public bool toBoolean(ubyte[] raw) {
     assert(raw.length == 1);
     auto value = raw.read!bool();
     return value;
+  }
+  static public ubyte[] toUbyte(bool value) {
+    ubyte[] res;
+    res.length = 1;
+    res.write!bool(value, 0);
+    return res;
   }
 }

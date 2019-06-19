@@ -28,10 +28,9 @@ class DatapointSdk {
     // TODO: convert
     JSONValue res;
     res["id"] = dv.id;
+
     // assert that description can be found
-    OS_DatapointDescription *p;
-    p = (dv.id in descriptions);
-    if (p is null) {
+    if ((dv.id in descriptions) is null) {
       writeln("Datapoint can't be found");
       throw new Exception("Datapoint can't be found");
     }
@@ -55,11 +54,55 @@ class DatapointSdk {
 
   }
   private OS_DatapointValue convert2OSValue(JSONValue value) {
-    // TODO: get dpt type from descriptions
-    // TODO: convert
     OS_DatapointValue res;
-    // TODO: check type. array=> set multiple; object=>set one valu; default => err
-    // TODO: assert that "value" or "raw" field is present value object
+    if (value.type() != JSONType.object) {
+      throw new Exception("JSON datapoint value payload is not object.");
+    }
+    if (("id" in value) is null) {
+      throw new Exception("JSON datapoint value should contain id field.");
+    }
+    if (value["id"].type() != JSONType.integer) {
+      throw new Exception("JSON datapoint value id field should be number.");
+    }
+
+    auto id = cast(ushort) value["id"].integer;
+    if ((id in descriptions) is null) {
+      writeln("Datapoint can't be found");
+      throw new Exception("Datapoint can't be found");
+    }
+
+    auto hasValue = !(("value" in value) is null);
+    auto hasRaw = !(("raw" in value) is null);
+    if (!(hasValue || hasRaw)) {
+      throw new Exception("JSON datapoint value should contain one of value/raw fields.");
+    }
+    if (hasRaw && value["raw"].type() != JSONType.string) {
+      throw new Exception("JSON datapoint value raw field should be string.");
+    }
+
+    res.id = id;
+    ubyte[] raw;
+
+    auto dpt = descriptions[id].type;
+    // raw value encoded in base64
+    if (hasRaw) {
+      res.value = Base64.decode(value["raw"].str);
+    } else {
+      switch(dpt) {
+        case OS_DatapointType.dpt1:
+          // TODO: check type. true/false/int(0-1)/...
+          res.value = DPT1.toUbyte(value["value"].boolean);
+          break;
+        case OS_DatapointType.dpt9:
+          res.value = DPT9.toUbyte(value["value"].floating);
+          break;
+        default:
+          writeln("unknown yet dtp");
+          break;
+      }
+    }
+
+    // converted value
     return res;
   }
   private Baos baos;
