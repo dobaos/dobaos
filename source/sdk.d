@@ -64,6 +64,55 @@ class DatapointSdk {
   }
   private Baos baos;
   // TODO: methods to work with baos
+  public JSONValue getDescription(JSONValue payload) {
+    JSONValue res;
+    if(payload.type() == JSONType.null_) {
+      // return all descriptions
+      JSONValue allDatapointId = parseJSON("[]");
+      allDatapointId.array.length = descriptions.keys.length;
+
+      auto count = 0;
+      foreach(id; descriptions.keys) {
+        allDatapointId.array[count] = cast(int) descriptions[id].id;
+        count += 1;
+      }
+
+      res = getDescription(allDatapointId);
+    } else if (payload.type() == JSONType.array) {
+      foreach(JSONValue id; payload.array) {
+        assert(id.type() == JSONType.integer);
+      }
+
+      res = parseJSON("[]");
+      res.array.length = payload.array.length;
+
+      auto count = 0;
+      foreach(JSONValue id; payload.array) {
+        res.array[count] = getDescription(id);
+        count += 1;
+      }
+    } else if (payload.type() == JSONType.integer) {
+      // return descr for selected datapoint
+      ushort id = cast(ushort) payload.integer;
+      if ((id in descriptions) is null) {
+        writeln("Datapoint can't be found");
+        throw new Exception("Datapoint can't be found");
+      }
+
+      auto descr = descriptions[id];
+      res["id"] = descr.id;
+      res["type"] = descr.type;
+      res["priority"] = descr.flags.priority;
+      res["communication"] = descr.flags.communication;
+      res["read"] = descr.flags.read;
+      res["write"] = descr.flags.write;
+      res["read_on_init"] = descr.flags.read_on_init;
+      res["transmit"] = descr.flags.transmit;
+      res["update"] = descr.flags.update;
+    }
+    return res;
+  }
+
   public JSONValue getValue(JSONValue payload) {
     JSONValue res;
     if (payload.type() == JSONType.integer) {

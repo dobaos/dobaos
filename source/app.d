@@ -23,7 +23,6 @@ void main()
 
     JSONValue res;
 
-    // TODO: switch(method) ..... send response; default: unknown method
     auto jmethod = ("method" in jreq);
     if (jmethod is null) {
       writeln("there is no method field in json req");
@@ -38,6 +37,18 @@ void main()
 
     string method = ("method" in jreq).str;
     switch(method) {
+      case "get description":
+        try {
+          StopWatch sw;
+          sw.start();
+          res["success"] = true;
+          res["payload"] = sdk.getDescription(jreq["payload"]);
+          sendResponse(res);
+          writeln("is time: ", sw.peek());
+        } catch(Exception e) {
+          writeln("exception caught: ", e);
+        }
+        break;
       case "get value":
         try {
           res["success"] = true;
