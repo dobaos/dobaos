@@ -197,29 +197,21 @@ class DatapointSdk {
     return res;
   }
 
-  public void processInd() {
+  public JSONValue processInd() {
+    JSONValue res = parseJSON("null");
     OS_Message ind = baos.processInd();
     if (ind.service == OS_Services.DatapointValueInd) {
-      JSONValue[] result;
-      result.length = ind.datapoint_values.length;
+      res = parseJSON("{}");
+      res["method"] = "datapoint value";
+      res["payload"] = parseJSON("[]");
+      res["payload"].array.length = ind.datapoint_values.length;
       // example
       auto count = 0;
       foreach(OS_DatapointValue dv; ind.datapoint_values) {
-        /****
-          if (dv.id == 10) {
-          OS_DatapointValue[] newVal;
-          newVal.length = 1;
-          newVal[0].id = 11;
-          newVal[0].value.length = 1;
-          newVal[0].value[0] = dv.value[0] == 0? 32: 8;
-          writeln("new val: ", newVal[0].value[0]);
-          Thread.sleep(1.msecs);
-          baos.SetDatapointValueReq(cast(ushort) 10, newVal);
-          } ****/
-
-        // convert to base type
+        // convert to json type
         JSONValue _res;
         _res["id"] = dv.id;
+        _res["raw"] = Base64.encode(dv.value);
         switch(descriptions[dv.id].type) {
           case OS_DatapointType.dpt1:
             _res["value"] = DPT1.toBoolean(dv.value);
@@ -233,12 +225,14 @@ class DatapointSdk {
             writeln("unknown yet dtp");
             break;
         }
-        result[count] = _res;
+        res["payload"].array[count] = _res;
         count++;
         // TODO: create ind object {id, value, raw} and return
       }
-      result.length = count;
     }
+    // TODO: server ind
+
+    return res;
   }
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {
 

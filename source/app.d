@@ -76,7 +76,10 @@ void main()
 
   // process incoming values
   while(true) {
-    sdk.processInd();
+    JSONValue ind = sdk.processInd();
+    if (ind.type() != JSONType.null_) {
+      dsm.broadcast(ind);
+    }
     dsm.processMessages();
 
     // TODO: calculate approximate sleep time depending on baudrate

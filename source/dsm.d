@@ -75,7 +75,7 @@ class Dsm {
     sub.subscribe(req_channel, toDelegate(&handleMessage));
   }
   public void broadcast(JSONValue data) {
-    writeln("broadcasting net yet here");
+    pub.send("PUBLISH", bcast_channel, data.toJSON());
   }
   public void processMessages() {
     sub.processMessages();
