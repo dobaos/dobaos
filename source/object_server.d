@@ -102,6 +102,7 @@ struct OS_ConfigFlags {
 
 struct OS_DatapointDescription {
   ushort id;
+  ushort length;
   OS_DatapointType type;
   OS_ConfigFlags flags;
 }
@@ -188,6 +189,37 @@ class OS_Protocol {
       _result.flags.read_on_init = cast(bool)(config_flags & 0x40);
       _result.flags.update = cast(bool)(config_flags & 0x80);
       _result.type = to!OS_DatapointType(dpt);
+
+      // TODO: value_type =>> length table
+      _result.length = 1;
+      switch(value_type) {
+        case 0, 1, 2, 3, 4, 5, 6, 7:
+          _result.length = 1;
+          break;
+        case 8:
+          _result.length = 2;
+          break;
+        case 9:
+          _result.length = 3;
+          break;
+        case 10:
+          _result.length = 4;
+          break;
+        case 11:
+          _result.length = 6;
+          break;
+        case 12:
+          _result.length = 8;
+          break;
+        case 13:
+          _result.length = 10;
+          break;
+        case 14:
+          _result.length = 16;
+          break;
+        default:
+          break;
+      }
 
       // push to result array
       result[count] = _result;

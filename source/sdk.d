@@ -24,6 +24,10 @@ const ushort MAX_DATAPOINT_NUM = 1000;
 class DatapointSdk {
   private ushort SI_currentBufferSize;
   private OS_DatapointDescription[ushort] descriptions;
+
+  // stored values
+  private JSONValue[ushort] values;
+
   private JSONValue convert2JSONValue(OS_DatapointValue dv) {
     // TODO: get dpt type from descriptions
     // TODO: convert
@@ -176,10 +180,8 @@ class DatapointSdk {
         throw new Exception(cast(string) val.error.message);
       }
     } else if (payload.type() == JSONType.array) {
-      // TODO: check every element if it is integer
-      // TODO: then calculate getValue map [{id, number}...]
-      // TODO: get values, convert and return
-      writeln("is array");
+      // sort array, create new with uniq numbers
+      // then calculate length to cover maximum possible values
       ushort[] idUshort;
       idUshort.length = payload.array.length;
       auto count = 0;
@@ -187,11 +189,12 @@ class DatapointSdk {
       foreach(JSONValue id; payload.array) {
         // assert
         assert(id.type() == JSONType.integer);
+        assert(id.integer > 0 && id.integer <= MAX_DATAPOINT_NUM);
+        assert((cast(ushort) id.integer in descriptions) != null);
         idUshort[count] = cast(ushort) id.integer;
         count += 1;
       }
       idUshort.sort();
-      writeln("sorted: ", idUshort);
 
       // generate array with no dublicated id numbers
       ushort[] idUniq;
@@ -211,18 +214,82 @@ class DatapointSdk {
         }
       }
       idUniq.length = countUniq;
-      writeln("uniq: ", idUniq);
 
       res = parseJSON("[]");
-      res.array.length = idUniq.length;
+      res.array.length = 1000;
 
-      count = 0;
-      // temporary, refactor
-      foreach(id; idUniq) {
-        JSONValue jid = cast(int) id;
-        res.array[count] = getValue(jid);
-        count += 1;
+      // now calculate max length of response
+      auto headerSize = 6;
+      // default 250 - 6 = 244
+      auto maxResLen = SI_currentBufferSize - headerSize;
+
+      // current index in array
+      auto currentIndex = 0;
+      // expected response len
+      auto currentLen = 0;
+
+      // current id. 
+      // GetDatapointValueReq(start, number, filter.all) returns all datapoints
+      // even if they are not configured in ETS
+      // and for them length is 1
+      // so, 
+      ushort id = idUniq[currentIndex];
+
+      // params for ObjectServer request
+      ushort start = id;
+      ushort number = 0;
+
+      // response count to fill array
+      auto resCount = 0;
+      // get values with current params
+      void _getValues() {
+          auto val = baos.GetDatapointValueReq(start, number);
+          //writeln(val.datapoint_values);
+          // TODO: error check
+          foreach(_val; val.datapoint_values) {
+            if ((_val.id in descriptions) != null) {
+              res.array[resCount] = convert2JSONValue(_val);
+              resCount += 1;
+            }
+          }
       }
+      while(currentIndex < idUniq.length) {
+        ushort dpLen = 1;
+        if ((id in descriptions) != null) {
+          // if is configured
+          dpLen = descriptions[id].length;
+        } else {
+          // otherwise value is [0]
+          dpLen = 1;
+        }
+        // header len for every value is 4
+        currentLen += 4 + dpLen;
+        // moving next
+        if (currentLen < maxResLen + 1) {
+          if (idUniq[currentIndex] == id) {
+            number = cast(ushort) (id - start);
+            if (currentIndex == idUniq.length - 1) {
+              number += 1;
+              _getValues();
+              currentIndex += 2;
+            } else {
+              currentIndex += 1;
+            }
+          }
+          id += 1;
+        } else {
+          // if exceeded length
+          number += 1;
+          _getValues();
+
+          // start again from id under cursor
+          id = idUniq[currentIndex];
+          start = id;
+          number = 0;
+          currentLen = 0;
+        }
+      }
+      res.array.length = resCount;
     } else {
       throw new Exception("unknown payload type.");
     }
