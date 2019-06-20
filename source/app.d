@@ -41,30 +41,33 @@ void main()
         try {
           StopWatch sw;
           sw.start();
-          res["success"] = true;
+          res["method"] = "success";
           res["payload"] = sdk.getDescription(jreq["payload"]);
           sendResponse(res);
           writeln("is time: ", sw.peek());
         } catch(Exception e) {
-          writeln("exception caught: ", e);
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
         }
         break;
       case "get value":
         try {
-          res["success"] = true;
+          res["method"] = "success";
           StopWatch sw;
           sw.start();
           res["payload"] = sdk.getValue(jreq["payload"]);
           writeln("is time: ", sw.peek());
           sendResponse(res);
         } catch(Exception e) {
-          res["success"] = false;
+          res["method"] = "error";
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
       default:
-        res["success"] = false;
+        res["method"] = "error";
+        res["payload"] = "Unknown API method";
         StopWatch sw;
         sw.start();
         sendResponse(res);
@@ -85,6 +88,6 @@ void main()
     // TODO: calculate approximate sleep time depending on baudrate
     // process redis messages here?
     // TODO: simple messages as a model; test
-    Thread.sleep(1.msecs);
+    Thread.sleep(2.msecs);
   }
 }
