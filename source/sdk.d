@@ -6,6 +6,7 @@
 
 module sdk;
 
+import std.algorithm;
 import std.stdio;
 import std.bitmanip;
 import std.range.primitives : empty;
@@ -50,9 +51,10 @@ class DatapointSdk {
         writeln("unknown yet dtp");
         break;
     }
-    return res;
 
+    return res;
   }
+
   private OS_DatapointValue convert2OSValue(JSONValue value) {
     OS_DatapointValue res;
     if (value.type() != JSONType.object) {
@@ -105,6 +107,7 @@ class DatapointSdk {
     // converted value
     return res;
   }
+
   private Baos baos;
   // TODO: methods to work with baos
   public JSONValue getDescription(JSONValue payload) {
@@ -153,6 +156,7 @@ class DatapointSdk {
       res["transmit"] = descr.flags.transmit;
       res["update"] = descr.flags.update;
     }
+
     return res;
   }
 
@@ -176,18 +180,47 @@ class DatapointSdk {
       // TODO: then calculate getValue map [{id, number}...]
       // TODO: get values, convert and return
       writeln("is array");
-      // assert
+      ushort[] idUshort;
+      idUshort.length = payload.array.length;
+      auto count = 0;
+      assert(payload.array.length > 0);
       foreach(JSONValue id; payload.array) {
+        // assert
         assert(id.type() == JSONType.integer);
+        idUshort[count] = cast(ushort) id.integer;
+        count += 1;
       }
+      idUshort.sort();
+      writeln("sorted: ", idUshort);
+
+      // generate array with no dublicated id numbers
+      ushort[] idUniq;
+      // max length is payload len
+      idUniq.length = idUshort.length;
+      auto countUniq = 0;
+      auto countOrigin = 0;
+      idUniq[0] = idUshort[0];
+      countUniq = 1;
+      foreach(id; idUshort) {
+        if (idUniq[countUniq - 1] != idUshort[countOrigin]) {
+          idUniq[countUniq] = idUshort[countOrigin];
+          countUniq += 1;
+          countOrigin += 1;
+        } else {
+          countOrigin += 1;
+        }
+      }
+      idUniq.length = countUniq;
+      writeln("uniq: ", idUniq);
 
       res = parseJSON("[]");
-      res.array.length = payload.array.length;
+      res.array.length = idUniq.length;
 
-      auto count = 0;
+      count = 0;
       // temporary, refactor
-      foreach(JSONValue id; payload.array) {
-        res.array[count] = getValue(id);
+      foreach(id; idUniq) {
+        JSONValue jid = cast(int) id;
+        res.array[count] = getValue(jid);
         count += 1;
       }
     } else {
