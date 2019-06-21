@@ -412,14 +412,20 @@ class OS_Protocol {
 
     return result;
   }
-  static ubyte[] SetDatapointValueReq(ushort start, OS_DatapointValue[] values) {
+  static ubyte[] SetDatapointValueReq(OS_DatapointValue[] values) {
     ubyte[] result;
     // max len
     ubyte header_length = 6;
     ubyte value_length = 0;
+    // as max as possible. anyway, max datapoint id is 1000;
+    ushort start = 65535;
     foreach(OS_DatapointValue value; values) {
       // id, cmd, len, value
       value_length += ushort.sizeof + ubyte.sizeof + ubyte.sizeof+ value.value.length;
+      // get min from values
+      if (value.id < start) {
+        start = value.id;
+      }
     }
     result.length = header_length + value_length;
 

@@ -297,6 +297,67 @@ class DatapointSdk {
     return res;
   }
 
+  public JSONValue setValue(JSONValue payload) {
+    // TODO: 
+    JSONValue res;
+    if (payload.type() == JSONType.object) {
+      writeln("is object");
+    } else if (payload.type() == JSONType.array) {
+      assert(payload.array.length > 0);
+      // array for converted values
+      OS_DatapointValue[] rawValues;
+      rawValus.length = payload.array.length;
+      auto count = 0;
+      foreach(JSONValue value; payload.array) {
+        // assert
+        assert(value.type() == JSONType.object);
+        assert(("id" in value) != null);
+        assert(value["id"].type() == JSONType.integer);
+        ushort id = cast(ushort) value["id"].integer;
+        assert(id > 0 && id <= MAX_DATAPOINT_NUM);
+        assert((id in descriptions) != null);
+        rawValues[count] = convert2OSValue(value);
+        count += 1;
+      }
+
+      res = parseJSON("[]");
+      res.array.length = 1000;
+
+      // now calculate max length of response
+      auto headerSize = 6;
+      // default 250 - 6 = 244
+      auto maxResLen = SI_currentBufferSize - headerSize;
+
+      // current index in array
+      auto currentIndex = 0;
+      // expected response len
+      auto expectedLen = 0;
+      // TODO: calculate, send
+      // temp array for raw values
+      // when expected len exceeded, send req and fill
+      OS_DatapointValue[] currentValues;
+      
+      while (currentIndex < rawValues.length) {
+        expectedLen += 4;
+        expectedLen += rawValues[currentIndex].length;
+        if (expectedLen > maxResLen) {
+          // TODO: send req,
+          // TODO: clear len values
+        } else {
+          // proceed next
+          currentIndex += 1;
+        }
+      }
+
+      // TODO: process response, error handling
+      // TODO: intelligent error handling: 
+      // TODO: error/success for each datapoint in array
+
+    } else {
+      throw new Exception("unknown payload type.");
+    }
+  }
+
   public JSONValue processInd() {
     JSONValue res = parseJSON("null");
     OS_Message ind = baos.processInd();

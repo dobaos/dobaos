@@ -16,6 +16,8 @@ import sdk;
 
 void main()
 {
+          StopWatch mainSw;
+          mainSw.start();
   auto sdk = new DatapointSdk();
   auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, "hello", "friend");
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
@@ -76,6 +78,7 @@ void main()
   }
   dsm.subscribe(toDelegate(&handleRequest));
   writeln("IPC ready");
+  writeln("started in: ", mainSw.peek());
 
   // process incoming values
   while(true) {
