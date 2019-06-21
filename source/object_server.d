@@ -413,6 +413,7 @@ class OS_Protocol {
     return result;
   }
   static ubyte[] SetDatapointValueReq(OS_DatapointValue[] values) {
+    writeln("object_server.SetDatapointValueReq: ", values);
     ubyte[] result;
     // max len
     ubyte header_length = 6;
@@ -431,7 +432,7 @@ class OS_Protocol {
 
     // service header
     result.write!ubyte(OS_MainService, 0);
-    result.write!ubyte(OS_Services.GetDatapointValueReq, 1);
+    result.write!ubyte(OS_Services.SetDatapointValueReq, 1);
     // start BE
     result.write!ushort(start, 2);
     // number BE
@@ -452,6 +453,8 @@ class OS_Protocol {
       result[c+4..end] = value.value[0..$];
       c = end;
     }
+
+    writeln(result);
 
     return result;
   }

@@ -140,10 +140,10 @@ class Baos {
   public OS_Message GetDatapointValueReq(ushort start, ushort number = 1) {
     return commonRequest(OS_Protocol.GetDatapointValueReq(start, number));
   }
-  public OS_Message SetDatapointValueReq(ushort start, OS_DatapointValue[] values) {
+  public OS_Message SetDatapointValueReq(OS_DatapointValue[] values) {
     // TODO: get rid of start, sort values array by id, then values[0].id is start.
     writeln("baos.SetDatapointValueReq");
-    return commonRequest(OS_Protocol.SetDatapointValueReq(start, values));
+    return commonRequest(OS_Protocol.SetDatapointValueReq(values));
   }
   // constructor
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {

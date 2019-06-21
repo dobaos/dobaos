@@ -67,6 +67,20 @@ void main()
           sendResponse(res);
         }
         break;
+      case "set value":
+        try {
+          res["method"] = "success";
+          StopWatch sw;
+          sw.start();
+          res["payload"] = sdk.setValue(jreq["payload"]);
+          writeln("is time: ", sw.peek());
+          sendResponse(res);
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
       default:
         res["method"] = "error";
         res["payload"] = "Unknown API method";

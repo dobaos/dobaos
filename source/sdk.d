@@ -93,14 +93,17 @@ class DatapointSdk {
     // raw value encoded in base64
     if (hasRaw) {
       res.value = Base64.decode(value["raw"].str);
+      res.length = cast(ubyte)res.value.length;
     } else {
       switch(dpt) {
         case OS_DatapointType.dpt1:
           // TODO: check type. true/false/int(0-1)/...
           res.value = DPT1.toUbyte(value["value"].boolean);
+          res.length = cast(ubyte)res.value.length;
           break;
         case OS_DatapointType.dpt9:
           res.value = DPT9.toUbyte(value["value"].floating);
+          res.length = cast(ubyte)res.value.length;
           break;
         default:
           writeln("unknown yet dtp");
@@ -243,15 +246,15 @@ class DatapointSdk {
       auto resCount = 0;
       // get values with current params
       void _getValues() {
-          auto val = baos.GetDatapointValueReq(start, number);
-          //writeln(val.datapoint_values);
-          // TODO: error check
-          foreach(_val; val.datapoint_values) {
-            if ((_val.id in descriptions) != null) {
-              res.array[resCount] = convert2JSONValue(_val);
-              resCount += 1;
-            }
+        auto val = baos.GetDatapointValueReq(start, number);
+        //writeln(val.datapoint_values);
+        // TODO: error check
+        foreach(_val; val.datapoint_values) {
+          if ((_val.id in descriptions) != null) {
+            res.array[resCount] = convert2JSONValue(_val);
+            resCount += 1;
           }
+        }
       }
       while(currentIndex < idUniq.length) {
         ushort dpLen = 1;
@@ -306,7 +309,7 @@ class DatapointSdk {
       assert(payload.array.length > 0);
       // array for converted values
       OS_DatapointValue[] rawValues;
-      rawValus.length = payload.array.length;
+      rawValues.length = payload.array.length;
       auto count = 0;
       foreach(JSONValue value; payload.array) {
         // assert
@@ -335,16 +338,30 @@ class DatapointSdk {
       // TODO: calculate, send
       // temp array for raw values
       // when expected len exceeded, send req and fill
+      count = 0;
       OS_DatapointValue[] currentValues;
-      
+      currentValues.length = rawValues.length;
+
       while (currentIndex < rawValues.length) {
         expectedLen += 4;
         expectedLen += rawValues[currentIndex].length;
         if (expectedLen > maxResLen) {
           // TODO: send req,
           // TODO: clear len values
+          currentValues.length = count;
+          auto setValResult = baos.SetDatapointValueReq(currentValues);
+          writeln(setValResult);
+          count = 0;
         } else {
+          // last element
+          currentValues[count] = rawValues[currentIndex];
           // proceed next
+          count += 1;
+          if (currentIndex == rawValues.length - 1) {
+            currentValues.length = count;
+            auto setValResult = baos.SetDatapointValueReq(currentValues);
+            writeln(setValResult);
+          }
           currentIndex += 1;
         }
       }
@@ -356,6 +373,8 @@ class DatapointSdk {
     } else {
       throw new Exception("unknown payload type.");
     }
+
+    return res;
   }
 
   public JSONValue processInd() {
