@@ -348,6 +348,7 @@ class OS_Protocol {
             writeln("SetDatapointValueRes:", data);
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.GetDatapointValueRes;
+            result.success = true;
             // TODO: parse response
             break;
           case OS_Services.DatapointValueInd:

@@ -324,12 +324,13 @@ class DatapointSdk {
       }
 
       res = parseJSON("[]");
-      res.array.length = 1000;
+      res.array.length = rawValues.length;
 
       // now calculate max length of response
       auto headerSize = 6;
       // default 250 - 6 = 244
       auto maxResLen = SI_currentBufferSize - headerSize;
+      //maxResLen = 6;
 
       // current index in array
       auto currentIndex = 0;
@@ -341,6 +342,32 @@ class DatapointSdk {
       count = 0;
       OS_DatapointValue[] currentValues;
       currentValues.length = rawValues.length;
+      writeln("rawValues.length: ", rawValues.length);
+
+      auto resCount = 0;
+
+      void _setValues() {
+          currentValues.length = count;
+          auto setValResult = baos.SetDatapointValueReq(currentValues);
+          writeln(setValResult);
+          if (setValResult.success) {
+            for(auto i = currentIndex - count + 1; i < currentIndex + 1; i += 1) {
+              writeln("currentIndex ", currentIndex, "; count ", count);
+              res.array[resCount] = convert2JSONValue(rawValues[i]);
+              res.array[resCount]["success"] = true;
+              resCount += 1;
+            }
+          } else {
+            for(auto i = currentIndex - count + 1; i < currentIndex + 1; i += 1) {
+              auto _res = parseJSON("{}");
+              _res["id"] = rawValues[i].id;
+              _res["success"] = false;
+              _res["error"] = setValResult.error.message;
+              res.array[resCount] = _res;
+              resCount += 1;
+            }
+          }
+      }
 
       while (currentIndex < rawValues.length) {
         expectedLen += 4;
@@ -348,19 +375,20 @@ class DatapointSdk {
         if (expectedLen > maxResLen) {
           // TODO: send req,
           // TODO: clear len values
-          currentValues.length = count;
-          auto setValResult = baos.SetDatapointValueReq(currentValues);
-          writeln(setValResult);
+          _setValues();
           count = 0;
+          currentValues.length = 0;
+          currentValues.length = rawValues.length;
+          expectedLen = 0;
         } else {
-          // last element
+          writeln("currentVal len: ", currentValues.length);
+          writeln("count: ", count);
           currentValues[count] = rawValues[currentIndex];
-          // proceed next
           count += 1;
+
           if (currentIndex == rawValues.length - 1) {
-            currentValues.length = count;
-            auto setValResult = baos.SetDatapointValueReq(currentValues);
-            writeln(setValResult);
+            // last element
+            _setValues();
           }
           currentIndex += 1;
         }
