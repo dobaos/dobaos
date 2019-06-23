@@ -17,7 +17,6 @@ import object_server;
 import datapoints;
 import baos;
 
-// TODO: structs for converted datapoint value
 
 const ushort MAX_DATAPOINT_NUM = 1000;
 
@@ -29,8 +28,8 @@ class DatapointSdk {
   private JSONValue[ushort] values;
 
   private JSONValue convert2JSONValue(OS_DatapointValue dv) {
-    // TODO: get dpt type from descriptions
-    // TODO: convert
+    // get dpt type from descriptions
+    // then convert
     JSONValue res;
     res["id"] = dv.id;
 
@@ -52,8 +51,7 @@ class DatapointSdk {
         res["value"] = DPT9.toFloat(dv.value);
         break;
       default:
-        writeln("unknown yet dtp");
-        break;
+        throw new Exception("DPT is not supported");
     }
 
     return res;
@@ -95,19 +93,37 @@ class DatapointSdk {
       res.value = Base64.decode(value["raw"].str);
       res.length = cast(ubyte)res.value.length;
     } else {
+      auto _value = value["value"];
       switch(dpt) {
         case OS_DatapointType.dpt1:
           // TODO: check type. true/false/int(0-1)/...
-          res.value = DPT1.toUbyte(value["value"].boolean);
+          bool _val = true;
+          if (_value.type() == JSONType.false_) {
+            _val = false;
+          } else if (_value.type() == JSONType.integer) {
+            _val = _value.integer != 0;
+          } else if (_value.type() == JSONType.uinteger) {
+            _val = _value.uinteger != 0;
+          } else if (_value.type() == JSONType.float_) {
+            _val = _value.floating != 0;
+          }
+          res.value = DPT1.toUbyte(_val);
           res.length = cast(ubyte)res.value.length;
           break;
         case OS_DatapointType.dpt9:
-          res.value = DPT9.toUbyte(value["value"].floating);
+          float _val;
+          if (_value.type() == JSONType.float_) {
+            _val = _value.floating;
+          } else if (_value.type() == JSONType.integer) {
+            _val = cast(float) _value.integer;
+          } else {
+            throw new Exception("Incorrect value type");
+          }
+          res.value = DPT9.toUbyte(_val);
           res.length = cast(ubyte)res.value.length;
           break;
         default:
-          writeln("unknown yet dtp");
-          break;
+          throw new Exception("DPT is not supported");
       }
     }
 
@@ -116,7 +132,7 @@ class DatapointSdk {
   }
 
   private Baos baos;
-  // TODO: methods to work with baos
+
   public JSONValue getDescription(JSONValue payload) {
     JSONValue res;
     if(payload.type() == JSONType.null_) {
@@ -179,7 +195,6 @@ class DatapointSdk {
         res = convert2JSONValue(val.datapoint_values[0]);
       } else {
         writeln("values: bad:: ", val.error.message);
-        // TODO: throw error
         throw new Exception(cast(string) val.error.message);
       }
     } else if (payload.type() == JSONType.array) {
@@ -247,7 +262,7 @@ class DatapointSdk {
       // get values with current params
       void _getValues() {
         auto val = baos.GetDatapointValueReq(start, number);
-        //writeln(val.datapoint_values);
+
         // TODO: error check
         foreach(_val; val.datapoint_values) {
           if ((_val.id in descriptions) != null) {
@@ -301,10 +316,26 @@ class DatapointSdk {
   }
 
   public JSONValue setValue(JSONValue payload) {
-    // TODO: 
     JSONValue res;
     if (payload.type() == JSONType.object) {
       writeln("is object");
+      assert(("id" in payload) != null);
+      assert(payload["id"].type() == JSONType.integer);
+      ushort id = cast(ushort) payload["id"].integer;
+      assert(id > 0 && id <= MAX_DATAPOINT_NUM);
+      assert((id in descriptions) != null);
+      res = parseJSON("{}");
+      auto rawValue = convert2OSValue(payload);
+      auto setValResult = baos.SetDatapointValueReq([rawValue]);
+      // for each datapoint add item to response
+      if (setValResult.success) {
+        res = convert2JSONValue(rawValue);
+        res["success"] = true;
+      } else {
+        res["id"] = rawValue.id;
+        res["success"] = false;
+        res["error"] = setValResult.error.message;
+      }
     } else if (payload.type() == JSONType.array) {
       assert(payload.array.length > 0);
       // array for converted values
@@ -319,6 +350,7 @@ class DatapointSdk {
         ushort id = cast(ushort) value["id"].integer;
         assert(id > 0 && id <= MAX_DATAPOINT_NUM);
         assert((id in descriptions) != null);
+        // TODO: handle errors on this stage
         rawValues[count] = convert2OSValue(value);
         count += 1;
       }
@@ -336,68 +368,62 @@ class DatapointSdk {
       auto currentIndex = 0;
       // expected response len
       auto expectedLen = 0;
-      // TODO: calculate, send
-      // temp array for raw values
-      // when expected len exceeded, send req and fill
-      count = 0;
+
+      // temp array for raw values to fill 
+      // when expected len exceeded, send req and clear
       OS_DatapointValue[] currentValues;
       currentValues.length = rawValues.length;
-      writeln("rawValues.length: ", rawValues.length);
-
+      count = 0;
+      // for response
       auto resCount = 0;
 
       void _setValues() {
-          currentValues.length = count;
-          auto setValResult = baos.SetDatapointValueReq(currentValues);
-          writeln(setValResult);
-          if (setValResult.success) {
-            for(auto i = currentIndex - count + 1; i < currentIndex + 1; i += 1) {
-              writeln("currentIndex ", currentIndex, "; count ", count);
-              res.array[resCount] = convert2JSONValue(rawValues[i]);
-              res.array[resCount]["success"] = true;
-              resCount += 1;
-            }
-          } else {
-            for(auto i = currentIndex - count + 1; i < currentIndex + 1; i += 1) {
-              auto _res = parseJSON("{}");
-              _res["id"] = rawValues[i].id;
-              _res["success"] = false;
-              _res["error"] = setValResult.error.message;
-              res.array[resCount] = _res;
-              resCount += 1;
-            }
+        currentValues.length = count;
+        auto setValResult = baos.SetDatapointValueReq(currentValues);
+        // for each datapoint add item to response
+        if (setValResult.success) {
+          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
+            // convert back to JSON value and return
+            res.array[resCount] = convert2JSONValue(rawValues[i]);
+            res.array[resCount]["success"] = true;
+            resCount += 1;
           }
+        } else {
+          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
+            auto _res = parseJSON("{}");
+            _res["id"] = rawValues[i].id;
+            _res["success"] = false;
+            _res["error"] = setValResult.error.message;
+            res.array[resCount] = _res;
+            resCount += 1;
+          }
+        }
       }
 
+      // moving in rawValues array
       while (currentIndex < rawValues.length) {
         expectedLen += 4;
         expectedLen += rawValues[currentIndex].length;
         if (expectedLen > maxResLen) {
-          // TODO: send req,
-          // TODO: clear len values
+          // send req if len is exeeded
+          // clear len values
           _setValues();
           count = 0;
           currentValues.length = 0;
           currentValues.length = rawValues.length;
           expectedLen = 0;
         } else {
-          writeln("currentVal len: ", currentValues.length);
-          writeln("count: ", count);
+          // if we still can add values
           currentValues[count] = rawValues[currentIndex];
           count += 1;
+          currentIndex += 1;
 
-          if (currentIndex == rawValues.length - 1) {
-            // last element
+          // if it was last element
+          if (currentIndex == rawValues.length) {
             _setValues();
           }
-          currentIndex += 1;
         }
       }
-
-      // TODO: process response, error handling
-      // TODO: intelligent error handling: 
-      // TODO: error/success for each datapoint in array
-
     } else {
       throw new Exception("unknown payload type.");
     }
