@@ -347,7 +347,14 @@ class OS_Protocol {
           case OS_Services.SetDatapointValueRes:
             writeln("SetDatapointValueRes:", data);
             result.direction = OS_MessageDirection.response;
-            result.service= OS_Services.GetDatapointValueRes;
+            result.service= OS_Services.SetDatapointValueRes;
+            result.success = true;
+            // TODO: parse response
+            break;
+          case OS_Services.SetServerItemRes:
+            writeln("SetServerItemRes:", data);
+            result.direction = OS_MessageDirection.response;
+            result.service= OS_Services.SetServerItemRes;
             result.success = true;
             // TODO: parse response
             break;
@@ -455,8 +462,48 @@ class OS_Protocol {
       c = end;
     }
 
-    writeln(result);
+    return result;
+  }
+  static ubyte[] SetServerItemReq(OS_ServerItem[] items) {
+    writeln("object_server.SetServerItemReq: ", items);
+    ubyte[] result;
+    // max len
+    ubyte header_length = 6;
+    ubyte value_length = 0;
+    // as max as possible
+    ushort start = 65535;
+    foreach(item; items) {
+      // id, cmd, len, value
+      value_length += ushort.sizeof + ubyte.sizeof + ubyte.sizeof+ item.value.length;
+      // get min from values
+      if (item.id < start) {
+        start = item.id;
+      }
+    }
+    result.length = header_length + value_length;
 
+    // service header
+    result.write!ubyte(OS_MainService, 0);
+    result.write!ubyte(OS_Services.SetServerItemReq, 1);
+    // start BE
+    result.write!ushort(start, 2);
+    // number BE
+    ushort number = cast(ushort) items.length;
+    result.write!ushort(number, 4);
+
+    // current position
+    int c = header_length; 
+    foreach(item; items) {
+      result.write!ushort(item.id, c);
+      result.write!ubyte(cast(ubyte) item.value.length, c + 2);
+
+      // end position of value chunk
+      int end = c+3 + cast(int) item.value.length;
+      result[c+3..end] = item.value[0..$];
+      c = end;
+    }
+
+    writeln(result);
     return result;
   }
 }
