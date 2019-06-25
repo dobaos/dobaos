@@ -20,6 +20,8 @@ class Baos {
   private OS_Message _res;
   // and indications. 
   private OS_Message[] _ind;
+  private bool _resetInd;
+  // TODO: server ind
 
   private bool resetAckReceived = false;
   private bool ackReceived = true;
@@ -45,6 +47,7 @@ class Baos {
       ackFrame.type = FT12FrameType.ackFrame;
       ubyte[] ackBuffer = FT12Helper.compose(ackFrame);
       com.write(ackBuffer);
+      _resetInd = true;
     } else  if (isDataFrame) {
       OS_Message result = OS_Protocol.processIncomingMessage(frame.payload);
       // send reset request
@@ -101,6 +104,14 @@ class Baos {
     result.service = OS_Services.unknown;
 
     return  result;
+  }
+
+  // returns true if reset indication was received
+  public bool processResetInd() {
+    bool result = _resetInd;
+    _resetInd = false;
+
+    return result;
   }
 
   private OS_Message commonRequest(ubyte[] message) {

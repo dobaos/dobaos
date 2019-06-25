@@ -468,10 +468,9 @@ class DatapointSdk {
 
     return res;
   }
-  this(string device = "/dev/ttyS1", string params = "19200:8E1") {
 
-    baos = new Baos(device, params);
-
+  // on reset 
+  void _onReset() {
     auto serverItemMessage = baos.GetServerItemReq(1, 17);
 
     // maximum buffer size
@@ -497,11 +496,14 @@ class DatapointSdk {
       }
       }
      ***/
-    // TODO: calculate max num of dps
 
-    // count for loaded datapoints
+    // calculate max num of dps
+
+    // count for loaded datapoints number
     auto count = 0;
+
     // GetDatapointDescriptionRes has a header(6b) and 5bytes each dp
+    // so, incoming message can contain descr for following num of dpts:
     ushort number = cast(ushort)(SI_currentBufferSize - 6)/5;
     ushort start = 1;
     while(start < MAX_DATAPOINT_NUM ) {
@@ -513,15 +515,33 @@ class DatapointSdk {
       if (descr.success) {
         foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
           //writeln("here comes description #", dd.id, "[", dd.type, "] ");
-          // TODO: save in hash?
           descriptions[dd.id] = dd;
           count++;
         }
       } else {
+        // there will be a lot of baos erros, 
+        // if there is datapoints no configured
+        // and so ignore them
         //writeln("here comes error:", start, "-", number,": ", descr.error.message);
       }
       start += number;
     }
     writefln("Datapoints[%d] loaded.", count);
+  }
+
+  // on incoming reset req. ETS download/bus dis and then -connected
+  public void processResetInd() {
+    bool resetInd = baos.processResetInd();
+    if (resetInd) {
+      _onReset();
+    }
+  }
+
+  this(string device = "/dev/ttyS1", string params = "19200:8E1") {
+
+    baos = new Baos(device, params);
+    
+    // load datapoints at very start
+    _onReset();
   }
 }

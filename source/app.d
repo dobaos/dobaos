@@ -96,6 +96,7 @@ void main()
 
   // process incoming values
   while(true) {
+    sdk.processResetInd();
     JSONValue ind = sdk.processInd();
     if (ind.type() != JSONType.null_) {
       dsm.broadcast(ind);
@@ -103,8 +104,6 @@ void main()
     dsm.processMessages();
 
     // TODO: calculate approximate sleep time depending on baudrate
-    // process redis messages here?
-    // TODO: simple messages as a model; test
     Thread.sleep(2.msecs);
   }
 }
