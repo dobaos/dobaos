@@ -16,8 +16,8 @@ import sdk;
 
 void main()
 {
-          StopWatch mainSw;
-          mainSw.start();
+  StopWatch mainSw;
+  mainSw.start();
   auto sdk = new DatapointSdk();
   auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, "hello", "friend");
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
@@ -96,7 +96,16 @@ void main()
 
   // process incoming values
   while(true) {
+    // TODO: now, there is a problem
+    // TODO: when reset ind is received
+    // TODO: blocking method may be trying to run
+    // TODO: e.g. when bus was disconnected
+    // TODO: and in this time was req from redis
+    // TODO: of course, that req was not successfull
+    // TODO: but he is blocking everything
+    // TODO: resolve this problem
     sdk.processResetInd();
+
     JSONValue ind = sdk.processInd();
     if (ind.type() != JSONType.null_) {
       dsm.broadcast(ind);

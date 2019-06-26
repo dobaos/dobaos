@@ -16,11 +16,13 @@ class Baos {
   private FT12Helper ft12;
   private FT12FrameParity currentParity = FT12FrameParity.unknown;
 
+  // TODO: names by standard. (which?)
+
   // var to store result for last response
   private OS_Message _res;
   // and indications. 
   private OS_Message[] _ind;
-  private bool _resetInd;
+  public bool resetInd;
   // TODO: server ind
 
   private bool resetAckReceived = false;
@@ -28,6 +30,7 @@ class Baos {
   private bool responseReceived = true;
 
   private void onFT12Frame(FT12Frame frame) {
+    writeln("frame:: ", frame);
     OS_Message[] messagesToEmit = [];
     bool isAck = frame.isAckFrame();
     bool isResetInd = frame.isResetInd();
@@ -47,9 +50,11 @@ class Baos {
       ackFrame.type = FT12FrameType.ackFrame;
       ubyte[] ackBuffer = FT12Helper.compose(ackFrame);
       com.write(ackBuffer);
-      _resetInd = true;
+      resetInd = true;
     } else  if (isDataFrame) {
       OS_Message result = OS_Protocol.processIncomingMessage(frame.payload);
+      writeln("is data frame");
+      writeln(result);
       // send reset request
       FT12Frame ackFrame;
       ackFrame.type = FT12FrameType.ackFrame;
@@ -57,12 +62,12 @@ class Baos {
       com.write(ackBuffer);
 
       if (result.direction == OS_MessageDirection.indication) {
-        //writeln("is indication");
+        writeln("is indication");
         // return message
         _ind.length++;
         _ind[$-1] = result;
       } else if(result.direction == OS_MessageDirection.response) {
-        //writeln("is response");
+        writeln("is response");
         // if sometimes 0xe5 is not received
         ackReceived = true;
         responseReceived = true;
@@ -106,14 +111,6 @@ class Baos {
     return  result;
   }
 
-  // returns true if reset indication was received
-  public bool processResetInd() {
-    bool result = _resetInd;
-    _resetInd = false;
-
-    return result;
-  }
-
   private OS_Message commonRequest(ubyte[] message) {
     // reqs are syncronuous, so, no queue is required
     if (resetAckReceived && ackReceived && responseReceived) {
@@ -131,15 +128,34 @@ class Baos {
       request.payload = message[0..$];
       ubyte[] buffer = ft12.compose(request);
       com.write(buffer);
-      while(!responseReceived) {
-        processIncomingData();
+      // пока не получен ответ, либо индикатор сброса
+      while(!(responseReceived || resetInd)) {
+        try {
+          processIncomingData();
+          if (resetInd) {
+            writeln("reset indication was received");
+            _res.success = false;
+            _res.service = OS_Services.unknown;
+            _res.error = new Exception("unknown error");
+
+            responseReceived = true;
+            ackReceived = true;
+          }
+        } catch(Exception e) {
+          writeln(e);
+        }
         Thread.sleep(2.msecs);
       }
+      writeln("ответ?", _res);
+
       return _res;
     }
 
     OS_Message result;
+    result.success = false;
+    result.error = new Exception("unknown error");
     result.service = OS_Services.unknown;
+
     return result;
   }
   public OS_Message GetDatapointDescriptionReq(ushort start, ushort number = 1) {
@@ -171,6 +187,9 @@ class Baos {
     resetFrame.type = FT12FrameType.resetReq;
     ubyte[] resetReqBuffer = ft12.compose(resetFrame);
     com.write(resetReqBuffer);
+
+    // init var
+    resetInd = false;
     // and wait until it is received
     while(!resetAckReceived) {
       processIncomingData();

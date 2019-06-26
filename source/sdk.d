@@ -184,18 +184,19 @@ class DatapointSdk {
   }
 
   public JSONValue getValue(JSONValue payload) {
-    JSONValue res;
+    JSONValue res = parseJSON("{}");
     if (payload.type() == JSONType.integer) {
       writeln("is integer");
       ushort id = cast(ushort) payload.integer;
       auto val = baos.GetDatapointValueReq(id);
-      writeln(val);
-      if (val.success) {
+      writeln("sdk.getValue: ", val);
+      if (val.service == OS_Services.GetDatapointValueRes && val.success) {
         assert(val.datapoint_values.length == 1);
         res = convert2JSONValue(val.datapoint_values[0]);
       } else {
-        writeln("values: bad:: ", val.error.message);
-        throw new Exception(cast(string) val.error.message);
+        writeln("values bad");
+        //writeln("values: bad:: ", val.error.message);
+        throw val.error;
       }
     } else if (payload.type() == JSONType.array) {
       // sort array, create new with uniq numbers
@@ -262,6 +263,7 @@ class DatapointSdk {
       // get values with current params
       void _getValues() {
         auto val = baos.GetDatapointValueReq(start, number);
+        assert(val.success);
 
         // TODO: error check
         foreach(_val; val.datapoint_values) {
@@ -531,14 +533,13 @@ class DatapointSdk {
 
   // on incoming reset req. ETS download/bus dis and then -connected
   public void processResetInd() {
-    bool resetInd = baos.processResetInd();
-    if (resetInd) {
+    if (baos.resetInd) {
+      baos.resetInd = false;
       _onReset();
     }
   }
 
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {
-
     baos = new Baos(device, params);
     
     // load datapoints at very start
