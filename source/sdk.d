@@ -535,6 +535,7 @@ class DatapointSdk {
   public void processResetInd() {
     if (baos.resetInd) {
       baos.resetInd = false;
+      writeln("Reset indication was received");
       _onReset();
     }
   }

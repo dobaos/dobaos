@@ -30,7 +30,7 @@ class Baos {
   private bool responseReceived = true;
 
   private void onFT12Frame(FT12Frame frame) {
-    writeln("frame:: ", frame);
+    //writeln("frame:: ", frame);
     OS_Message[] messagesToEmit = [];
     bool isAck = frame.isAckFrame();
     bool isResetInd = frame.isResetInd();
@@ -38,12 +38,12 @@ class Baos {
     if (isAck) {
       if (!resetAckReceived) {
         resetAckReceived = true;
-        writeln("frame received: ack for reset request");
+        //writeln("frame received: ack for reset request");
       } else {
         ackReceived = true;
       }
     } else if (isResetInd) {
-      writeln("frame received: resetInd");
+      //writeln("frame received: resetInd");
       currentParity = FT12FrameParity.unknown;
       // send acknowledge
       FT12Frame ackFrame;
@@ -53,8 +53,8 @@ class Baos {
       resetInd = true;
     } else  if (isDataFrame) {
       OS_Message result = OS_Protocol.processIncomingMessage(frame.payload);
-      writeln("is data frame");
-      writeln(result);
+      //writeln("is data frame");
+      //writeln(result);
       // send reset request
       FT12Frame ackFrame;
       ackFrame.type = FT12FrameType.ackFrame;
@@ -62,12 +62,12 @@ class Baos {
       com.write(ackBuffer);
 
       if (result.direction == OS_MessageDirection.indication) {
-        writeln("is indication");
+        //writeln("is indication");
         // return message
         _ind.length++;
         _ind[$-1] = result;
       } else if(result.direction == OS_MessageDirection.response) {
-        writeln("is response");
+        //writeln("is response");
         // if sometimes 0xe5 is not received
         ackReceived = true;
         responseReceived = true;
@@ -133,7 +133,7 @@ class Baos {
         try {
           processIncomingData();
           if (resetInd) {
-            writeln("reset indication was received");
+            //writeln("reset indication was received");
             _res.success = false;
             _res.service = OS_Services.unknown;
             _res.error = new Exception("unknown error");
@@ -146,7 +146,6 @@ class Baos {
         }
         Thread.sleep(2.msecs);
       }
-      writeln("ответ?", _res);
 
       return _res;
     }
@@ -168,13 +167,12 @@ class Baos {
     return commonRequest(OS_Protocol.GetDatapointValueReq(start, number));
   }
   public OS_Message SetDatapointValueReq(OS_DatapointValue[] values) {
-    writeln("baos.SetDatapointValueReq");
     return commonRequest(OS_Protocol.SetDatapointValueReq(values));
   }
   public OS_Message SetServerItemReq(OS_ServerItem[] items) {
-    writeln("baos.SetDatapointValueReq");
     return commonRequest(OS_Protocol.SetServerItemReq(items));
   }
+
   // constructor
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {
     com = new SerialPortNonBlk(device, params);

@@ -345,14 +345,14 @@ class OS_Protocol {
             result.datapoint_values = _processDatapointValueRes(data);
             break;
           case OS_Services.SetDatapointValueRes:
-            writeln("SetDatapointValueRes:", data);
+            //writeln("SetDatapointValueRes:", data);
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.SetDatapointValueRes;
             result.success = true;
             // TODO: parse response
             break;
           case OS_Services.SetServerItemRes:
-            writeln("SetServerItemRes:", data);
+            //writeln("SetServerItemRes:", data);
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.SetServerItemRes;
             result.success = true;
@@ -369,9 +369,11 @@ class OS_Protocol {
         }
       }
     } catch(Exception e) {
+      result.service = OS_Services.unknown;
       result.success = false;
       result.error = e;
     }
+
     return result;
   }
 
@@ -421,7 +423,7 @@ class OS_Protocol {
     return result;
   }
   static ubyte[] SetDatapointValueReq(OS_DatapointValue[] values) {
-    writeln("object_server.SetDatapointValueReq: ", values);
+    //writeln("object_server.SetDatapointValueReq: ", values);
     ubyte[] result;
     // max len
     ubyte header_length = 6;
@@ -465,7 +467,7 @@ class OS_Protocol {
     return result;
   }
   static ubyte[] SetServerItemReq(OS_ServerItem[] items) {
-    writeln("object_server.SetServerItemReq: ", items);
+    //writeln("object_server.SetServerItemReq: ", items);
     ubyte[] result;
     // max len
     ubyte header_length = 6;
@@ -503,7 +505,7 @@ class OS_Protocol {
       c = end;
     }
 
-    writeln(result);
+    //writeln(result);
     return result;
   }
 }

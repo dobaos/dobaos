@@ -73,8 +73,39 @@ void main()
           StopWatch sw;
           sw.start();
           res["payload"] = sdk.setValue(jreq["payload"]);
-          writeln("is time: ", sw.peek());
           sendResponse(res);
+          // broadcast values
+          auto jcast = parseJSON("{}");
+          jcast["method"] = "datapoint value";
+          if (res["payload"].type() == JSONType.array) {
+            jcast["payload"] = parseJSON("[]");
+            jcast["payload"].array.length = res["payload"].array.length;
+            auto count = 0;
+            foreach(value; res["payload"].array) {
+              if (value["success"].type() == JSONType.true_) {
+                auto _jvalue = parseJSON("{}");
+                _jvalue["id"] = value["id"];
+                _jvalue["raw"] = value["raw"];
+                _jvalue["value"] = value["value"];
+                jcast["payload"].array[count] = _jvalue;
+                count += 1;
+              }
+            }
+            if (count > 0) {
+              dsm.broadcast(jcast);
+            }
+          } else if (res["payload"].type() == JSONType.object) {
+            auto value = res["payload"];
+            if (value["success"].type() == JSONType.true_) {
+              auto _jvalue = parseJSON("{}");
+              _jvalue["id"] = value["id"];
+              _jvalue["raw"] = value["raw"];
+              _jvalue["value"] = value["value"];
+              jcast["payload"] = _jvalue;
+            }
+            dsm.broadcast(jcast);
+          }
+          writeln("is time: ", sw.peek());
         } catch(Exception e) {
           res["method"] = "error";
           res["payload"] = e.message;
