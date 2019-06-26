@@ -47,6 +47,9 @@ class DatapointSdk {
       case OS_DatapointType.dpt1:
         res["value"] = DPT1.toBoolean(dv.value);
         break;
+      case OS_DatapointType.dpt5:
+        res["value"] = DPT5.toUByte(dv.value);
+        break;
       case OS_DatapointType.dpt9:
         res["value"] = DPT9.toFloat(dv.value);
         break;
@@ -107,7 +110,24 @@ class DatapointSdk {
           } else if (_value.type() == JSONType.float_) {
             _val = _value.floating != 0;
           }
-          res.value = DPT1.toUbyte(_val);
+          res.value = DPT1.toUBytes(_val);
+          res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt5:
+          // TODO: check type. true/false/int(0-1)/...
+          ubyte _val;
+          if (_value.type() == JSONType.integer) {
+            if (_value.integer < 0 || _value.integer > 255) {
+              throw new Exception("Value should be in range 0-255");
+            }
+            _val = cast(ubyte) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            if (_value.uinteger > 255) {
+              throw new Exception("Value should be in range 0-255");
+            }
+            _val = cast(ubyte) _value.uinteger;
+          }
+          res.value = DPT5.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
           break;
         case OS_DatapointType.dpt9:
@@ -119,7 +139,7 @@ class DatapointSdk {
           } else {
             throw new Exception("Incorrect value type");
           }
-          res.value = DPT9.toUbyte(_val);
+          res.value = DPT9.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
           break;
         default:
@@ -320,7 +340,6 @@ class DatapointSdk {
   public JSONValue setValue(JSONValue payload) {
     JSONValue res;
     if (payload.type() == JSONType.object) {
-      writeln("is object");
       assert(("id" in payload) != null);
       assert(payload["id"].type() == JSONType.integer);
       ushort id = cast(ushort) payload["id"].integer;
@@ -433,6 +452,59 @@ class DatapointSdk {
     return res;
   }
 
+  public JSONValue getProgrammingMode() {
+    JSONValue res;
+    auto serverItemMessage = baos.GetServerItemReq(15);
+    if (!serverItemMessage.success) {
+      throw serverItemMessage.error;
+    }
+
+    foreach(si; serverItemMessage.server_items) {
+      if (si.id == 15) {
+        res = si.value.read!bool();
+
+        return res;
+      }
+    }
+
+
+    return res;
+  }
+  public JSONValue setProgrammingMode(JSONValue payload) {
+    JSONValue res;
+    ubyte[] uvalue = [0];
+    if (payload.type() == JSONType.true_) {
+      uvalue[0] = 1;
+    } else if (payload.type == JSONType.false_) {
+      uvalue[0] = 0;
+    } else if (payload.type == JSONType.integer) {
+      if (payload.integer != 0) {
+        uvalue[0] = 1;
+      } else {
+        uvalue[0] = 0;
+      }
+    } else if (payload.type == JSONType.uinteger) {
+      if (payload.uinteger != 0) {
+        uvalue[0] = 1;
+      } else {
+        uvalue[0] = 0;
+      }
+    } else {
+      throw new Exception("Invalid progmode value");
+    }
+    OS_ServerItem mode;
+    mode.id = 15;
+    mode.length = 1;
+    mode.value = uvalue;
+    res = parseJSON("{}");
+    auto setValResult = baos.SetServerItemReq([mode]);
+    res = setValResult.success;
+
+    return res;
+  }
+
+
+
   public JSONValue processInd() {
     JSONValue res = parseJSON("null");
     OS_Message ind = baos.processInd();
@@ -542,7 +614,7 @@ class DatapointSdk {
 
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {
     baos = new Baos(device, params);
-    
+
     // load datapoints at very start
     _onReset();
   }

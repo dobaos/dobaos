@@ -46,7 +46,7 @@ class DPT9 {
     float value = (0.01 * mant) * pow(2, exp);
     return value;
   }
-  static public ubyte[] toUbyte(float value) {
+  static public ubyte[] toUBytes(float value) {
     auto sign = 0x00;
     /***
     float exp = floor(max((log(abs(value) * 100) / log(2)) - 10, 0));
@@ -62,6 +62,7 @@ class DPT9 {
 
     ubyte[] res;
     res.length = 2;
+    // temporary
     res.write!ushort(42, 0);
 
     return res;
@@ -73,10 +74,24 @@ class DPT1 {
     auto value = raw.read!bool();
     return value;
   }
-  static public ubyte[] toUbyte(bool value) {
+  static public ubyte[] toUBytes(bool value) {
     ubyte[] res;
     res.length = 1;
     res.write!bool(value, 0);
+    return res;
+  }
+}
+
+class DPT5 {
+  static public ubyte toUByte(ubyte[] raw) {
+    assert(raw.length == 1);
+    auto value = raw.read!ubyte();
+    return value;
+  }
+  static public ubyte[] toUBytes(ubyte value) {
+    ubyte[] res;
+    res.length = 1;
+    res.write!ubyte(value, 0);
     return res;
   }
 }

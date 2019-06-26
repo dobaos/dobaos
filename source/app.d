@@ -112,6 +112,34 @@ void main()
           sendResponse(res);
         }
         break;
+      case "get programming mode":
+        try {
+          res["method"] = "success";
+          StopWatch sw;
+          sw.start();
+          res["payload"] = sdk.getProgrammingMode();
+          sendResponse(res);
+          writeln("is time: ", sw.peek());
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
+      case "set programming mode":
+        try {
+          res["method"] = "success";
+          StopWatch sw;
+          sw.start();
+          res["payload"] = sdk.setProgrammingMode(jreq["payload"]);
+          sendResponse(res);
+          writeln("is time: ", sw.peek());
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
       default:
         res["method"] = "error";
         res["payload"] = "Unknown API method";

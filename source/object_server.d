@@ -322,6 +322,7 @@ class OS_Protocol {
             //writeln("GetServerItemRes");
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.GetServerItemRes;
+            result.success = true;
             result.server_items = _processServerItemRes(data);
             break;
           case OS_Services.ServerItemInd:
@@ -352,7 +353,7 @@ class OS_Protocol {
             // TODO: parse response
             break;
           case OS_Services.SetServerItemRes:
-            //writeln("SetServerItemRes:", data);
+            writeln("SetServerItemRes:", data);
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.SetServerItemRes;
             result.success = true;
@@ -475,8 +476,8 @@ class OS_Protocol {
     // as max as possible
     ushort start = 65535;
     foreach(item; items) {
-      // id, cmd, len, value
-      value_length += ushort.sizeof + ubyte.sizeof + ubyte.sizeof+ item.value.length;
+      // id, len, value
+      value_length += ushort.sizeof + ubyte.sizeof+ item.value.length;
       // get min from values
       if (item.id < start) {
         start = item.id;
@@ -505,7 +506,7 @@ class OS_Protocol {
       c = end;
     }
 
-    //writeln(result);
+    writeln(result);
     return result;
   }
 }
