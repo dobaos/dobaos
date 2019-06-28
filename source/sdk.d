@@ -572,7 +572,7 @@ class DatapointSdk {
           for(auto i = currentIndex - count; i < currentIndex; i += 1) {
             auto _res = parseJSON("{}");
             _res["id"] = rawValues[i].id;
-            _res["success"] = false;
+            _res["success"] = true;
             res.array[resCount] = _res;
             resCount += 1;
           }
