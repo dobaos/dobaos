@@ -1,7 +1,5 @@
 /***
-
   Sdk to work with datapoints
-
  ***/
 
 module sdk;
@@ -16,8 +14,9 @@ import std.base64;
 import object_server;
 import datapoints;
 import baos;
+import errors;
 
-
+const ushort MIN_DATAPOINT_NUM = 1;
 const ushort MAX_DATAPOINT_NUM = 1000;
 
 class DatapointSdk {
@@ -35,8 +34,7 @@ class DatapointSdk {
 
     // assert that description can be found
     if ((dv.id in descriptions) is null) {
-      writeln("Datapoint can't be found");
-      throw new Exception("Datapoint can't be found");
+      throw new Exception(Errors.datapoint_not_found);
     }
 
     auto dpt = descriptions[dv.id].type;
@@ -54,7 +52,7 @@ class DatapointSdk {
         res["value"] = DPT9.toFloat(dv.value);
         break;
       default:
-        throw new Exception("DPT is not supported");
+        break;
     }
 
     return res;
@@ -63,28 +61,27 @@ class DatapointSdk {
   private OS_DatapointValue convert2OSValue(JSONValue value) {
     OS_DatapointValue res;
     if (value.type() != JSONType.object) {
-      throw new Exception("JSON datapoint value payload is not object.");
+      throw new Exception(Errors.wrong_payload_type);
     }
     if (("id" in value) is null) {
-      throw new Exception("JSON datapoint value should contain id field.");
+      throw new Exception(Errors.wrong_payload);
     }
     if (value["id"].type() != JSONType.integer) {
-      throw new Exception("JSON datapoint value id field should be number.");
+      throw new Exception(Errors.wrong_payload_type);
     }
 
     auto id = cast(ushort) value["id"].integer;
     if ((id in descriptions) is null) {
-      writeln("Datapoint can't be found");
-      throw new Exception("Datapoint can't be found");
+      throw new Exception(Errors.datapoint_not_found);
     }
 
     auto hasValue = !(("value" in value) is null);
     auto hasRaw = !(("raw" in value) is null);
     if (!(hasValue || hasRaw)) {
-      throw new Exception("JSON datapoint value should contain one of value/raw fields.");
+      throw new Exception(Errors.wrong_value_payload);
     }
     if (hasRaw && value["raw"].type() != JSONType.string) {
-      throw new Exception("JSON datapoint value raw field should be string.");
+      throw new Exception(Errors.wrong_value_payload);
     }
 
     res.id = id;
@@ -168,8 +165,10 @@ class DatapointSdk {
 
       res = getDescription(allDatapointId);
     } else if (payload.type() == JSONType.array) {
-      foreach(JSONValue id; payload.array) {
-        assert(id.type() == JSONType.integer);
+      foreach(JSONValue jid; payload.array) {
+        if (jid.type() != JSONType.integer) {
+          throw new Exception(Errors.wrong_payload);
+        }
       }
 
       res = parseJSON("[]");
@@ -184,8 +183,7 @@ class DatapointSdk {
       // return descr for selected datapoint
       ushort id = cast(ushort) payload.integer;
       if ((id in descriptions) is null) {
-        writeln("Datapoint can't be found");
-        throw new Exception("Datapoint can't be found");
+        throw new Exception(Errors.datapoint_not_found);
       }
 
       auto descr = descriptions[id];
@@ -198,6 +196,8 @@ class DatapointSdk {
       res["read_on_init"] = descr.flags.read_on_init;
       res["transmit"] = descr.flags.transmit;
       res["update"] = descr.flags.update;
+    } else {
+      throw new Exception(Errors.wrong_payload_type);
     }
 
     return res;
@@ -209,10 +209,10 @@ class DatapointSdk {
       ushort id = cast(ushort) payload.integer;
       auto val = baos.GetDatapointValueReq(id);
       if (val.service == OS_Services.GetDatapointValueRes && val.success) {
-        assert(val.datapoint_values.length == 1);
+        //assert(val.datapoint_values.length == 1);
         res = convert2JSONValue(val.datapoint_values[0]);
       } else {
-        //writeln("values: bad:: ", val.error.message);
+        // TODO: BaosErros(val.error);
         throw val.error;
       }
     } else if (payload.type() == JSONType.array) {
@@ -221,13 +221,21 @@ class DatapointSdk {
       ushort[] idUshort;
       idUshort.length = payload.array.length;
       auto count = 0;
-      assert(payload.array.length > 0);
+      if(payload.array.length == 0) {
+        throw new Exception(Errors.wrong_payload);
+      }
       foreach(JSONValue jid; payload.array) {
         // assert
-        assert(jid.type() == JSONType.integer);
+        if(jid.type() != JSONType.integer) {
+          throw new Exception(Errors.wrong_payload);
+        }
         ushort id = cast(ushort) jid.integer;
-        assert(id > 0 && id <= MAX_DATAPOINT_NUM);
-        assert((id in descriptions) != null);
+        if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+          throw new Exception(Errors.datapoint_out_of_bounds);
+        }
+        if((id in descriptions) == null) {
+          throw new Exception(Errors.datapoint_not_found);
+        }
         idUshort[count] = id;
         count += 1;
       }
@@ -281,9 +289,11 @@ class DatapointSdk {
       // get values with current params
       void _getValues() {
         auto val = baos.GetDatapointValueReq(start, number);
-        assert(val.success);
+        if(!val.success) {
+          // TODO: BaosError() method
+          throw new Exception("BAOS error");
+        }
 
-        // TODO: error check
         foreach(_val; val.datapoint_values) {
           if ((_val.id in descriptions) != null) {
             res.array[resCount] = convert2JSONValue(_val);
@@ -329,7 +339,7 @@ class DatapointSdk {
       }
       res.array.length = resCount;
     } else {
-      throw new Exception("unknown payload type.");
+      throw new Exception(Errors.wrong_payload_type);
     }
 
     return res;
@@ -338,11 +348,19 @@ class DatapointSdk {
   public JSONValue setValue(JSONValue payload) {
     JSONValue res;
     if (payload.type() == JSONType.object) {
-      assert(("id" in payload) != null);
-      assert(payload["id"].type() == JSONType.integer);
+      if(("id" in payload) == null) {
+        throw new Exception(Errors.wrong_payload);
+      }
+      if(payload["id"].type() != JSONType.integer) {
+        throw new Exception(Errors.wrong_payload);
+      }
       ushort id = cast(ushort) payload["id"].integer;
-      assert(id > 0 && id <= MAX_DATAPOINT_NUM);
-      assert((id in descriptions) != null);
+      if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+        throw new Exception(Errors.datapoint_out_of_bounds);
+      }
+      if((id in descriptions) == null) {
+        throw new Exception(Errors.datapoint_not_found);
+      }
       res = parseJSON("{}");
       auto rawValue = convert2OSValue(payload);
       rawValue.command = OS_DatapointValueCommand.set_and_send;
@@ -357,19 +375,31 @@ class DatapointSdk {
         res["error"] = setValResult.error.message;
       }
     } else if (payload.type() == JSONType.array) {
-      assert(payload.array.length > 0);
+      if(payload.array.length == 0) {
+        throw new Exception(Errors.wrong_payload);
+      }
       // array for converted values
       OS_DatapointValue[] rawValues;
       rawValues.length = payload.array.length;
       auto count = 0;
       foreach(JSONValue value; payload.array) {
         // assert
-        assert(value.type() == JSONType.object);
-        assert(("id" in value) != null);
-        assert(value["id"].type() == JSONType.integer);
+        if(value.type() != JSONType.object) {
+          throw new Exception(Errors.wrong_payload_type);
+        }
+        if(("id" in value) == null) {
+          throw new Exception(Errors.wrong_payload);
+        }
+        if(value["id"].type() != JSONType.integer) {
+          throw new Exception(Errors.wrong_payload_type);
+        }
         ushort id = cast(ushort) value["id"].integer;
-        assert(id > 0 && id <= MAX_DATAPOINT_NUM);
-        assert((id in descriptions) != null);
+        if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+          throw new Exception(Errors.datapoint_out_of_bounds);
+        }
+        if((id in descriptions) == null) {
+          throw new Exception(Errors.datapoint_not_found);
+        }
         // TODO: handle errors on this stage
         auto rawValue = convert2OSValue(value);
         rawValue.command = OS_DatapointValueCommand.set_and_send;
@@ -447,7 +477,7 @@ class DatapointSdk {
         }
       }
     } else {
-      throw new Exception("unknown payload type.");
+      throw new Exception(Errors.wrong_payload_type);
     }
 
     return res;
@@ -456,8 +486,12 @@ class DatapointSdk {
     JSONValue res;
     if (payload.type() == JSONType.integer) {
       ushort id = cast(ushort) payload.integer;
-      assert(id > 0 && id <= MAX_DATAPOINT_NUM);
-      assert((id in descriptions) != null);
+      if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+        throw new Exception(Errors.datapoint_out_of_bounds);
+      }
+      if((id in descriptions) == null) {
+        throw new Exception(Errors.datapoint_not_found);
+      }
       // read request is basically SetDatapointValueReq
       // with command "read [0x04]" and zero value
       OS_DatapointValue raw;
@@ -482,13 +516,21 @@ class DatapointSdk {
       OS_DatapointValue[] rawValues;
       rawValues.length = payload.array.length;
       auto count = 0;
-      assert(payload.array.length > 0);
+      if(payload.array.length == 0) {
+        throw new Exception(Errors.wrong_payload);
+      }
       foreach(JSONValue jid; payload.array) {
         // assert
-        assert(jid.type() == JSONType.integer);
+        if(jid.type() != JSONType.integer) {
+          throw new Exception(Errors.wrong_payload_type);
+        }
         ushort id = cast(ushort) jid.integer;
-        assert(id > 0 && id <= MAX_DATAPOINT_NUM);
-        assert((id in descriptions) != null);
+        if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+          throw new Exception(Errors.datapoint_out_of_bounds);
+        }
+        if((id in descriptions) == null) {
+          throw new Exception(Errors.datapoint_not_found);
+        }
         OS_DatapointValue raw;
         raw.id = id;
         raw.length = descriptions[id].length;
@@ -522,15 +564,16 @@ class DatapointSdk {
       // for response
       auto resCount = 0;
 
-      void _setValues() {
+      void _readValues() {
         currentValues.length = count;
         auto setValResult = baos.SetDatapointValueReq(currentValues);
         // for each datapoint add item to response
         if (setValResult.success) {
           for(auto i = currentIndex - count; i < currentIndex; i += 1) {
-            // convert back to JSON value and return
-            res.array[resCount] = convert2JSONValue(rawValues[i]);
-            res.array[resCount]["success"] = true;
+            auto _res = parseJSON("{}");
+            _res["id"] = rawValues[i].id;
+            _res["success"] = false;
+            res.array[resCount] = _res;
             resCount += 1;
           }
         } else {
@@ -552,7 +595,7 @@ class DatapointSdk {
         if (expectedLen > maxResLen) {
           // send req if len is exeeded
           // clear len values
-          _setValues();
+          _readValues();
           count = 0;
           currentValues.length = 0;
           currentValues.length = rawValues.length;
@@ -565,13 +608,12 @@ class DatapointSdk {
 
           // if it was last element
           if (currentIndex == rawValues.length) {
-            _setValues();
+            _readValues();
           }
         }
-
       }
     } else {
-      throw new Exception("Unknown payload type.");
+      throw new Exception(Errors.wrong_payload_type);
     }
 
     return res;
@@ -591,7 +633,6 @@ class DatapointSdk {
         return res;
       }
     }
-
 
     return res;
   }
@@ -615,7 +656,7 @@ class DatapointSdk {
         uvalue[0] = 0;
       }
     } else {
-      throw new Exception("Invalid progmode value");
+      throw new Exception(Errors.wrong_payload_type);
     }
     OS_ServerItem mode;
     mode.id = 15;
