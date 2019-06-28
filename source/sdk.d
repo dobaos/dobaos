@@ -206,15 +206,12 @@ class DatapointSdk {
   public JSONValue getValue(JSONValue payload) {
     JSONValue res = parseJSON("{}");
     if (payload.type() == JSONType.integer) {
-      writeln("is integer");
       ushort id = cast(ushort) payload.integer;
       auto val = baos.GetDatapointValueReq(id);
-      writeln("sdk.getValue: ", val);
       if (val.service == OS_Services.GetDatapointValueRes && val.success) {
         assert(val.datapoint_values.length == 1);
         res = convert2JSONValue(val.datapoint_values[0]);
       } else {
-        writeln("values bad");
         //writeln("values: bad:: ", val.error.message);
         throw val.error;
       }
@@ -225,12 +222,13 @@ class DatapointSdk {
       idUshort.length = payload.array.length;
       auto count = 0;
       assert(payload.array.length > 0);
-      foreach(JSONValue id; payload.array) {
+      foreach(JSONValue jid; payload.array) {
         // assert
-        assert(id.type() == JSONType.integer);
-        assert(id.integer > 0 && id.integer <= MAX_DATAPOINT_NUM);
-        assert((cast(ushort) id.integer in descriptions) != null);
-        idUshort[count] = cast(ushort) id.integer;
+        assert(jid.type() == JSONType.integer);
+        ushort id = cast(ushort) jid.integer;
+        assert(id > 0 && id <= MAX_DATAPOINT_NUM);
+        assert((id in descriptions) != null);
+        idUshort[count] = id;
         count += 1;
       }
       idUshort.sort();
@@ -347,6 +345,7 @@ class DatapointSdk {
       assert((id in descriptions) != null);
       res = parseJSON("{}");
       auto rawValue = convert2OSValue(payload);
+      rawValue.command = OS_DatapointValueCommand.set_and_send;
       auto setValResult = baos.SetDatapointValueReq([rawValue]);
       // for each datapoint add item to response
       if (setValResult.success) {
@@ -372,7 +371,9 @@ class DatapointSdk {
         assert(id > 0 && id <= MAX_DATAPOINT_NUM);
         assert((id in descriptions) != null);
         // TODO: handle errors on this stage
-        rawValues[count] = convert2OSValue(value);
+        auto rawValue = convert2OSValue(value);
+        rawValue.command = OS_DatapointValueCommand.set_and_send;
+        rawValues[count] = rawValue;
         count += 1;
       }
 
@@ -451,6 +452,130 @@ class DatapointSdk {
 
     return res;
   }
+  public JSONValue readValue(JSONValue payload) {
+    JSONValue res;
+    if (payload.type() == JSONType.integer) {
+      ushort id = cast(ushort) payload.integer;
+      assert(id > 0 && id <= MAX_DATAPOINT_NUM);
+      assert((id in descriptions) != null);
+      // read request is basically SetDatapointValueReq
+      // with command "read [0x04]" and zero value
+      OS_DatapointValue raw;
+      raw.id = id;
+      raw.length = descriptions[id].length;
+      raw.value.length = raw.length;
+      for(auto i = 0; i < raw.length; i += 1) {
+        raw.value[i] = 0;
+      }
+      raw.command = OS_DatapointValueCommand.read;
+
+      auto val = baos.SetDatapointValueReq([raw]);
+      if (val.service == OS_Services.SetDatapointValueRes && val.success) {
+        res = true;
+      } else {
+        //writeln("values: bad:: ", val.error.message);
+        throw val.error;
+      }
+    } else if (payload.type() == JSONType.array) {
+      // sort array, create new with uniq numbers
+      // then calculate length to cover maximum possible values
+      OS_DatapointValue[] rawValues;
+      rawValues.length = payload.array.length;
+      auto count = 0;
+      assert(payload.array.length > 0);
+      foreach(JSONValue jid; payload.array) {
+        // assert
+        assert(jid.type() == JSONType.integer);
+        ushort id = cast(ushort) jid.integer;
+        assert(id > 0 && id <= MAX_DATAPOINT_NUM);
+        assert((id in descriptions) != null);
+        OS_DatapointValue raw;
+        raw.id = id;
+        raw.length = descriptions[id].length;
+        raw.value.length = raw.length;
+        for(auto i = 0; i < raw.length; i += 1) {
+          raw.value[i] = 0;
+        }
+        raw.command = OS_DatapointValueCommand.read;
+        rawValues[count] = raw;
+        count += 1;
+      }
+
+      res = parseJSON("[]");
+      res.array.length = rawValues.length;
+
+      // now calculate reqs
+      auto headerSize = 6;
+      // default 250 - 6 = 244
+      auto maxResLen = SI_currentBufferSize - headerSize;
+
+      // current index in array
+      auto currentIndex = 0;
+      // expected response len
+      auto expectedLen = 0;
+
+      // temp array for raw values to fill 
+      // when expected len exceeded, send req and clear
+      OS_DatapointValue[] currentValues;
+      currentValues.length = rawValues.length;
+      count = 0;
+      // for response
+      auto resCount = 0;
+
+      void _setValues() {
+        currentValues.length = count;
+        auto setValResult = baos.SetDatapointValueReq(currentValues);
+        // for each datapoint add item to response
+        if (setValResult.success) {
+          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
+            // convert back to JSON value and return
+            res.array[resCount] = convert2JSONValue(rawValues[i]);
+            res.array[resCount]["success"] = true;
+            resCount += 1;
+          }
+        } else {
+          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
+            auto _res = parseJSON("{}");
+            _res["id"] = rawValues[i].id;
+            _res["success"] = false;
+            _res["error"] = setValResult.error.message;
+            res.array[resCount] = _res;
+            resCount += 1;
+          }
+        }
+      }
+
+      // moving in rawValues array
+      while (currentIndex < rawValues.length) {
+        expectedLen += 4;
+        expectedLen += rawValues[currentIndex].length;
+        if (expectedLen > maxResLen) {
+          // send req if len is exeeded
+          // clear len values
+          _setValues();
+          count = 0;
+          currentValues.length = 0;
+          currentValues.length = rawValues.length;
+          expectedLen = 0;
+        } else {
+          // if we still can add values
+          currentValues[count] = rawValues[currentIndex];
+          count += 1;
+          currentIndex += 1;
+
+          // if it was last element
+          if (currentIndex == rawValues.length) {
+            _setValues();
+          }
+        }
+
+      }
+    } else {
+      throw new Exception("Unknown payload type.");
+    }
+
+    return res;
+  }
 
   public JSONValue getProgrammingMode() {
     JSONValue res;
@@ -502,8 +627,6 @@ class DatapointSdk {
 
     return res;
   }
-
-
 
   public JSONValue processInd() {
     JSONValue res = parseJSON("null");

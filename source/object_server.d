@@ -47,11 +47,20 @@ enum OS_DatapointValueFilter {
   valid = 0x01,
   updated = 0x02
 }
+enum OS_DatapointValueCommand {
+  unknown = 0x00,
+  set = 0x01,
+  send = 0x02,
+  set_and_send = 0x03,
+  read = 0x04,
+  clear_transmission_state = 0x05
+}
 
 struct OS_DatapointValue  {
   ushort id;
   ubyte state;
   ubyte length;
+  OS_DatapointValueCommand command;
   ubyte[] value;
 }
 
@@ -102,7 +111,7 @@ struct OS_ConfigFlags {
 
 struct OS_DatapointDescription {
   ushort id;
-  ushort length;
+  ubyte length;
   OS_DatapointType type;
   OS_ConfigFlags flags;
 }
@@ -456,7 +465,9 @@ class OS_Protocol {
       result.write!ushort(value.id, c);
       // command: set and send
       // TODO: command in params
-      result.write!ubyte(3, c + 2);
+      ubyte command = cast(ubyte) value.command;
+      result.write!ubyte(command, c + 2);
+
       result.write!ubyte(cast(ubyte) value.value.length, c + 3);
 
       // end position of value chunk

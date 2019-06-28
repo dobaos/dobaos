@@ -112,6 +112,20 @@ void main()
           sendResponse(res);
         }
         break;
+      case "read value":
+        try {
+          res["method"] = "success";
+          StopWatch sw;
+          sw.start();
+          res["payload"] = sdk.readValue(jreq["payload"]);
+          writeln("is time: ", sw.peek());
+          sendResponse(res);
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
       case "get programming mode":
         try {
           res["method"] = "success";
