@@ -338,6 +338,18 @@ class DatapointSdk {
         }
       }
       res.array.length = resCount;
+    } else if(payload.type() == JSONType.null_) {
+      JSONValue allDatapoints = parseJSON("[]");
+      allDatapoints.array.length = descriptions.keys.length;
+      auto count = 0;
+      foreach(id; descriptions.keys) {
+        // cast to int, so, it is JSONType.integer, not uinteger
+        allDatapoints.array[count] = cast(int) id;
+        count += 1;
+      }
+      writeln(allDatapoints);
+
+      return getValue(allDatapoints);
     } else {
       throw new Exception(Errors.wrong_payload_type);
     }

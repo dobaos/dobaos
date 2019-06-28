@@ -191,12 +191,12 @@ class OS_Protocol {
       OS_DatapointDescription _result;
       _result.id = id;
       _result.flags.priority = to!OS_DatapointPriority(config_flags & 0x03);
-      _result.flags.communication = cast(bool)(config_flags & 0x04);
-      _result.flags.read = cast(bool)(config_flags & 0x08);
-      _result.flags.write = cast(bool)(config_flags & 0x10);
-      _result.flags.write = cast(bool)(config_flags & 0x20);
-      _result.flags.read_on_init = cast(bool)(config_flags & 0x40);
-      _result.flags.update = cast(bool)(config_flags & 0x80);
+      _result.flags.communication = (config_flags & 0x04) != 0;
+      _result.flags.read = (config_flags & 0x08) != 0;
+      _result.flags.write = (config_flags & 0x10) != 0;
+      _result.flags.read_on_init = (config_flags & 0x20) != 0;
+      _result.flags.transmit = (config_flags & 0x40) != 0;
+      _result.flags.update = (config_flags & 0x80) != 0;
       _result.type = to!OS_DatapointType(dpt);
 
       // TODO: value_type =>> length table
