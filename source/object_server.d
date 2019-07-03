@@ -16,6 +16,8 @@ import std.string;
 import std.bitmanip;
 import std.range.primitives : empty;
 
+import errors;
+
 ubyte OS_MainService = 0xF0;
 enum OS_Services {
   unknown,
@@ -285,39 +287,35 @@ class OS_Protocol {
     return result;
   }
 
-  private static OS_ServerItem[] _processServerItemRes(ubyte[] data) {
+  private static void _assertSuccess(ubyte[] data) {
     // start dp[2], number of dp[2], (err[1]/value[~varies])
     ushort start = data.read!ushort();
     ushort number = data.read!ushort();
-    if (number == 0) {
-      // TODO: error handling
-      throw new Exception(format("%d", data[0]));
+    ubyte error = data.read!ubyte();
+    // 0 = No error
+    if (number == 0 && error != 0) {
+      throw BaosError(error);
     }
+  }
 
-    return _processServerItems(data);
+  private static OS_ServerItem[] _processServerItemRes(ubyte[] data) {
+    _assertSuccess(data);
+
+    return _processServerItems(data[2*ushort.sizeof..$]);
   }
 
   private static OS_DatapointValue[] _processDatapointValueRes(ubyte[] data) {
     // start dp[2], number of dp[2], (err[1]/value[~varies])
-    ushort start = data.read!ushort();
-    ushort number = data.read!ushort();
-    if (number == 0) {
-      // TODO: error handling
-      throw new Exception(format("%d", data[0]));
-    }
+    _assertSuccess(data);
 
-    return _processCommonDatapointValues(data);
+    return _processCommonDatapointValues(data[2*ushort.sizeof..$]);
   }
 
-  private static OS_DatapointDescription[] _processDatapointDescriptionRes(ubyte[] data) {
+  private static OS_DatapointDescription[] _processGetDatapointDescriptionRes(ubyte[] data) {
     // start dp[2], number of dp[2], (err[1]/value[~varies])
-    int start = data.read!ushort();
-    int number = data.read!ushort();
-    if (number == 0) {
-      throw new Exception(format("%d", data[0]));
-    }
+    _assertSuccess(data);
 
-    return _processCommonDatapointDescriptions(data);
+    return _processCommonDatapointDescriptions(data[2*ushort.sizeof..$]);
   }
 
   static OS_Message processIncomingMessage(ubyte[] data) {
@@ -338,6 +336,7 @@ class OS_Protocol {
             //writeln("ServerItemInd");
             result.direction = OS_MessageDirection.indication;
             result.service= OS_Services.ServerItemInd;
+            result.success = true;
             result.server_items = _processServerItemRes(data);
             break;
           case OS_Services.GetDatapointDescriptionRes:
@@ -345,7 +344,7 @@ class OS_Protocol {
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.GetDatapointDescriptionRes;
             result.success = true;
-            result.datapoint_descriptions = _processDatapointDescriptionRes(data);
+            result.datapoint_descriptions = _processGetDatapointDescriptionRes(data);
             break;
           case OS_Services.GetDatapointValueRes:
             //writeln("GetDatapointValueRes");
@@ -359,19 +358,20 @@ class OS_Protocol {
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.SetDatapointValueRes;
             result.success = true;
-            // TODO: parse response
+            _assertSuccess(data);
             break;
           case OS_Services.SetServerItemRes:
             writeln("SetServerItemRes:", data);
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.SetServerItemRes;
             result.success = true;
-            // TODO: parse response
+            _assertSuccess(data);
             break;
           case OS_Services.DatapointValueInd:
             //writeln("DatapointValueInd");
             result.service= OS_Services.DatapointValueInd;
             result.direction = OS_MessageDirection.indication;
+            result.success = true;
             result.datapoint_values = _processDatapointValueRes(data);
             break;
           default:
@@ -379,7 +379,7 @@ class OS_Protocol {
         }
       }
     } catch(Exception e) {
-      result.service = OS_Services.unknown;
+      result.service = cast(OS_Services) subService;
       result.success = false;
       result.error = e;
     }

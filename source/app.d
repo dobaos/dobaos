@@ -169,14 +169,6 @@ void main()
 
   // process incoming values
   while(true) {
-    // TODO: now, there is a problem
-    // TODO: when reset ind is received
-    // TODO: blocking method may be trying to run
-    // TODO: e.g. when bus was disconnected
-    // TODO: and in this time was req from redis
-    // TODO: of course, that req was not successfull
-    // TODO: but he is blocking everything
-    // TODO: resolve this problem
     sdk.processResetInd();
 
     JSONValue ind = sdk.processInd();

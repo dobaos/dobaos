@@ -2,6 +2,8 @@ module baos;
 import std.stdio;
 import core.thread;
 
+import std.datetime.stopwatch;
+
 import serialport;
 
 // mi libs
@@ -19,15 +21,14 @@ class Baos {
   // TODO: names by standard. (which?)
 
   // var to store result for last response
-  private OS_Message _res;
+  private OS_Message _response;
   // and indications. 
   private OS_Message[] _ind;
-  public bool resetInd;
-  // TODO: server ind
+  private bool _resetInd;
 
-  private bool resetAckReceived = false;
-  private bool ackReceived = true;
-  private bool responseReceived = true;
+  private bool _resetAckReceived = false;
+  private bool _ackReceived = true;
+  private bool _responseReceived = true;
 
   private void onFT12Frame(FT12Frame frame) {
     //writeln("frame:: ", frame);
@@ -36,11 +37,11 @@ class Baos {
     bool isResetInd = frame.isResetInd();
     bool isDataFrame = frame.isDataFrame();
     if (isAck) {
-      if (!resetAckReceived) {
-        resetAckReceived = true;
-        //writeln("frame received: ack for reset request");
+      if (!_resetAckReceived) {
+        _resetAckReceived = true;
+        writeln("frame received: ack for reset request");
       } else {
-        ackReceived = true;
+        _ackReceived = true;
       }
     } else if (isResetInd) {
       //writeln("frame received: resetInd");
@@ -50,7 +51,7 @@ class Baos {
       ackFrame.type = FT12FrameType.ackFrame;
       ubyte[] ackBuffer = FT12Helper.compose(ackFrame);
       com.write(ackBuffer);
-      resetInd = true;
+      _resetInd = true;
     } else  if (isDataFrame) {
       OS_Message result = OS_Protocol.processIncomingMessage(frame.payload);
       //writeln("is data frame");
@@ -69,11 +70,11 @@ class Baos {
       } else if(result.direction == OS_MessageDirection.response) {
         //writeln("is response");
         // if sometimes 0xe5 is not received
-        ackReceived = true;
-        responseReceived = true;
+        _ackReceived = true;
+        _responseReceived = true;
         // store response in global var
         // to resolve it from request method
-        _res = result;
+        _response = result;
       }
     }
   }
@@ -110,12 +111,18 @@ class Baos {
 
     return  result;
   }
+  public bool processResetInd() {
+    bool res = _resetInd;
+    _resetInd = false;
+
+    return res;
+  }
 
   private OS_Message commonRequest(ubyte[] message) {
     // reqs are syncronuous, so, no queue is required
-    if (resetAckReceived && ackReceived && responseReceived) {
-      ackReceived = false;
-      responseReceived = false;
+    if (_resetAckReceived && _ackReceived && _responseReceived) {
+      _ackReceived = false;
+      _responseReceived = false;
       if (currentParity == FT12FrameParity.unknown || currentParity == FT12FrameParity.even) {
         currentParity = FT12FrameParity.odd;
       } else {
@@ -129,17 +136,17 @@ class Baos {
       ubyte[] buffer = ft12.compose(request);
       com.write(buffer);
       // пока не получен ответ, либо индикатор сброса
-      while(!(responseReceived || resetInd)) {
+      while(!(_responseReceived || _resetInd)) {
         try {
           processIncomingData();
-          if (resetInd) {
+          if (_resetInd) {
             //writeln("reset indication was received");
-            _res.success = false;
-            _res.service = OS_Services.unknown;
-            _res.error = new Exception("unknown error");
+            _response.success = false;
+            _response.service = OS_Services.unknown;
+            _response.error = new Exception("unknown error");
 
-            responseReceived = true;
-            ackReceived = true;
+            _responseReceived = true;
+            _ackReceived = true;
           }
         } catch(Exception e) {
           writeln(e);
@@ -147,7 +154,7 @@ class Baos {
         Thread.sleep(2.msecs);
       }
 
-      return _res;
+      return _response;
     }
 
     OS_Message result;
@@ -184,13 +191,17 @@ class Baos {
     FT12Frame resetFrame;
     resetFrame.type = FT12FrameType.resetReq;
     ubyte[] resetReqBuffer = ft12.compose(resetFrame);
+
+          StopWatch sw;
+          sw.start();
     com.write(resetReqBuffer);
 
     // init var
-    resetInd = false;
+    _resetInd = false;
     // and wait until it is received
-    while(!resetAckReceived) {
+    while(!_resetAckReceived) {
       processIncomingData();
     }
+          writeln("reset time: ", sw.peek());
   }
 }
