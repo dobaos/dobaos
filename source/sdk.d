@@ -106,6 +106,8 @@ class DatapointSdk {
             _val = _value.uinteger != 0;
           } else if (_value.type() == JSONType.float_) {
             _val = _value.floating != 0;
+          } else {
+            throw Errors.wrong_value_type;
           }
           res.value = DPT1.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
@@ -115,15 +117,18 @@ class DatapointSdk {
           ubyte _val;
           if (_value.type() == JSONType.integer) {
             if (_value.integer < 0 || _value.integer > 255) {
-              throw new Exception("Value should be in range 0-255");
+              throw Errors.wrong_value;
             }
             _val = cast(ubyte) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
             if (_value.uinteger > 255) {
-              throw new Exception("Value should be in range 0-255");
+              throw Errors.wrong_value;
             }
             _val = cast(ubyte) _value.uinteger;
+          } else {
+            throw Errors.wrong_value_type;
           }
+
           res.value = DPT5.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
           break;
@@ -134,13 +139,13 @@ class DatapointSdk {
           } else if (_value.type() == JSONType.integer) {
             _val = cast(float) _value.integer;
           } else {
-            throw new Exception("Incorrect value type");
+            throw Errors.wrong_value_type;
           }
           res.value = DPT9.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
           break;
         default:
-          throw new Exception("DPT is not supported");
+          throw Errors.dpt_not_supported;
       }
     }
 
