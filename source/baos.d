@@ -39,7 +39,7 @@ class Baos {
     if (isAck) {
       if (!_resetAckReceived) {
         _resetAckReceived = true;
-        writeln("frame received: ack for reset request");
+        writeln("Ack for reset request");
       } else {
         _ackReceived = true;
       }
@@ -192,8 +192,6 @@ class Baos {
     resetFrame.type = FT12FrameType.resetReq;
     ubyte[] resetReqBuffer = ft12.compose(resetFrame);
 
-          StopWatch sw;
-          sw.start();
     com.write(resetReqBuffer);
 
     // init var
@@ -202,6 +200,5 @@ class Baos {
     while(!_resetAckReceived) {
       processIncomingData();
     }
-          writeln("reset time: ", sw.peek());
   }
 }

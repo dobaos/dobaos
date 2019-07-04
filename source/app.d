@@ -13,27 +13,29 @@ import datapoints;
 import object_server;
 import dsm;
 import sdk;
+import errors;
 
 void main()
 {
-  StopWatch mainSw;
-  mainSw.start();
+  StopWatch sw;
+  sw.start();
   auto sdk = new DatapointSdk();
   auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, "hello", "friend");
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
-    writeln("now handle request in main app");
-
     JSONValue res;
 
     auto jmethod = ("method" in jreq);
     if (jmethod is null) {
-      writeln("there is no method field in json req");
       res["success"] = false;
+      res["payload"] = Errors.no_method_field.message;
+      sendResponse(res);
       return;
     }
     auto jpayload = ("payload" in jreq);
     if (jpayload is null) {
-      writeln("there is no payload field in json req");
+      res["success"] = false;
+      res["payload"] = Errors.no_payload_field.message;
+      sendResponse(res);
       return;
     }
 
@@ -41,12 +43,9 @@ void main()
     switch(method) {
       case "get description":
         try {
-          StopWatch sw;
-          sw.start();
           res["method"] = "success";
           res["payload"] = sdk.getDescription(jreq["payload"]);
           sendResponse(res);
-          writeln("is time: ", sw.peek());
         } catch(Exception e) {
           res["method"] = "error";
           res["payload"] = e.message;
@@ -56,10 +55,7 @@ void main()
       case "get value":
         try {
           res["method"] = "success";
-          StopWatch sw;
-          sw.start();
           res["payload"] = sdk.getValue(jreq["payload"]);
-          writeln("is time: ", sw.peek());
           sendResponse(res);
         } catch(Exception e) {
           res["method"] = "error";
@@ -70,8 +66,6 @@ void main()
       case "set value":
         try {
           res["method"] = "success";
-          StopWatch sw;
-          sw.start();
           res["payload"] = sdk.setValue(jreq["payload"]);
           sendResponse(res);
           // broadcast values
@@ -105,7 +99,6 @@ void main()
             }
             dsm.broadcast(jcast);
           }
-          writeln("is time: ", sw.peek());
         } catch(Exception e) {
           res["method"] = "error";
           res["payload"] = e.message;
@@ -115,10 +108,7 @@ void main()
       case "read value":
         try {
           res["method"] = "success";
-          StopWatch sw;
-          sw.start();
           res["payload"] = sdk.readValue(jreq["payload"]);
-          writeln("is time: ", sw.peek());
           sendResponse(res);
         } catch(Exception e) {
           res["method"] = "error";
@@ -129,11 +119,8 @@ void main()
       case "get programming mode":
         try {
           res["method"] = "success";
-          StopWatch sw;
-          sw.start();
           res["payload"] = sdk.getProgrammingMode();
           sendResponse(res);
-          writeln("is time: ", sw.peek());
         } catch(Exception e) {
           res["method"] = "error";
           res["payload"] = e.message;
@@ -143,11 +130,8 @@ void main()
       case "set programming mode":
         try {
           res["method"] = "success";
-          StopWatch sw;
-          sw.start();
           res["payload"] = sdk.setProgrammingMode(jreq["payload"]);
           sendResponse(res);
-          writeln("is time: ", sw.peek());
         } catch(Exception e) {
           res["method"] = "error";
           res["payload"] = e.message;
@@ -157,15 +141,14 @@ void main()
       default:
         res["method"] = "error";
         res["payload"] = "Unknown API method";
-        StopWatch sw;
-        sw.start();
         sendResponse(res);
         break;
     }
   }
   dsm.subscribe(toDelegate(&handleRequest));
   writeln("IPC ready");
-  writeln("started in: ", mainSw.peek());
+  writefln("Started in %dms", sw.peek.total!"msecs");
+  sw.stop();
 
   // process incoming values
   while(true) {

@@ -342,7 +342,6 @@ class DatapointSdk {
         allDatapoints.array[count] = cast(int) id;
         count += 1;
       }
-      writeln(allDatapoints);
 
       return getValue(allDatapoints);
     } else {
@@ -694,11 +693,14 @@ class DatapointSdk {
         switch(descriptions[dv.id].type) {
           case OS_DatapointType.dpt1:
             _res["value"] = DPT1.toBoolean(dv.value);
-            writeln("boo: ", _res["id"], "=", _res["value"]);
+            //writeln("boo: ", _res["id"], "=", _res["value"]);
+            break;
+          case OS_DatapointType.dpt5:
+            _res["value"] = DPT5.toUByte(dv.value);
             break;
           case OS_DatapointType.dpt9:
             _res["value"] = DPT9.toFloat(dv.value);
-            writeln("float: ", _res["id"], "=", _res["value"]);
+            //writeln("float: ", _res["id"], "=", _res["value"]);
             break;
           default:
             writeln("unknown yet dtp");
@@ -716,7 +718,7 @@ class DatapointSdk {
 
   // on reset 
   void _onReset() {
-    auto serverItemMessage = baos.GetServerItemReq(1, 17);
+    auto serverItemMessage = baos.GetServerItemReq(14, 1);
 
     // maximum buffer size
     SI_currentBufferSize = 0;
@@ -733,20 +735,11 @@ class DatapointSdk {
     }
     writeln("Server items loaded");
     writeln("Loading datapoints");
-    /***
-      if (datapointValueMessage.service == OS_Services.GetDatapointValueRes) {
-      writeln("values: good");
-      foreach(OS_DatapointValue dv; datapointValueMessage.datapoint_values) {
-      writeln(dv);
-      }
-      }
-     ***/
-
-    // calculate max num of dps
 
     // count for loaded datapoints number
     auto count = 0;
 
+    // calculate max num of dps in one response
     // GetDatapointDescriptionRes has a header(6b) and 5bytes each dp
     // so, incoming message can contain descr for following num of dpts:
     ushort number = cast(ushort)(SI_currentBufferSize - 6)/5;

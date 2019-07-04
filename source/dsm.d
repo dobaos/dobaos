@@ -12,7 +12,6 @@
 //    payload: {id: 1, value: 1, raw: "AZAz=" }/[{], ]/"string"
 //  }
 
-
 module dsm;
 import std.stdio;
 import std.json;
@@ -42,7 +41,6 @@ class Dsm {
     // delegate for incoming messages
     void handleMessage(string channel, string message)
     {
-      writefln("Redis channel '%s': %s", channel, message);
       try {
         JSONValue jreq = parseJSON(message);
 
@@ -53,25 +51,22 @@ class Dsm {
         // check if request has response_channel field
         auto jresponse_channel = ("response_channel" in jreq);
         if (jresponse_channel is null) {
-          writeln("no response_channel field in json request");
           return;
         }
         auto response_channel = ("response_channel" in jreq).str;
-        writeln("response_channel", response_channel);
 
         void sendResponse(JSONValue res) {
-          writeln("trying to send response to ", response_channel);
           pub.send("PUBLISH", response_channel, res.toJSON());
         }
         req_handler(jreq, &sendResponse);
       } catch(Exception e) {
-        writeln("error parsing json: %s ", e.msg);
+        //writeln("error parsing json: %s ", e.msg);
       } finally {
-        writeln("finally..");
+        //writeln("finally..");
       }
     }
     sub = new Subscriber(redis_host, redis_port);
-    writeln("subscribing to ", req_channel);
+    writeln("Subscribing to ", req_channel);
     sub.subscribe(req_channel, toDelegate(&handleMessage));
   }
   public void broadcast(JSONValue data) {

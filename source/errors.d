@@ -1,8 +1,9 @@
 module errors;
 
-// TODO: rethink
 enum Errors {
   unknown = new Exception("ERR_UNKNOWN"),
+  no_method_field = new Exception("ERR_NO_METHOD_FIELD"),
+  no_payload_field = new Exception("ERR_NO_PAYLOAD_FIELD"),
   datapoint_not_found = new Exception("ERR_DATAPOINT_NOT_FOUND"),
   wrong_payload_type = new Exception("ERR_WRONG_PAYLOAD_TYPE"),
   wrong_payload = new Exception("ERR_WRONG_PAYLOAD"),
