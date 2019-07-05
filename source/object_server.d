@@ -123,7 +123,7 @@ struct OS_Message {
   OS_MessageDirection direction;
   bool success;
   union {
-    // TODO: union of possible service returned structs
+    // union of possible service returned structs
     // DatapointDescriptions/DatapointValues/ServerItems/ParameterBytes
     OS_DatapointDescription[] datapoint_descriptions;
     OS_DatapointValue[] datapoint_values;
@@ -201,7 +201,7 @@ class OS_Protocol {
       _result.flags.update = (config_flags & 0x80) != 0;
       _result.type = to!OS_DatapointType(dpt);
 
-      // TODO: value_type =>> length table
+      // value_type =>> length table
       _result.length = 1;
       switch(value_type) {
         case 0, 1, 2, 3, 4, 5, 6, 7:
@@ -426,7 +426,6 @@ class OS_Protocol {
     return result;
   }
   static ubyte[] SetDatapointValueReq(OS_DatapointValue[] values) {
-    //writeln("object_server.SetDatapointValueReq: ", values);
     ubyte[] result;
     // max len
     ubyte header_length = 6;
@@ -508,7 +507,6 @@ class OS_Protocol {
       c = end;
     }
 
-    writeln(result);
     return result;
   }
 }

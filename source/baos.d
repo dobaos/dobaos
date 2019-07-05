@@ -18,8 +18,6 @@ class Baos {
   private FT12Helper ft12;
   private FT12FrameParity currentParity = FT12FrameParity.unknown;
 
-  // TODO: names by standard. (which?)
-
   // var to store result for last response
   private OS_Message _response;
   // and indications. 
@@ -31,7 +29,6 @@ class Baos {
   private bool _responseReceived = true;
 
   private void onFT12Frame(FT12Frame frame) {
-    //writeln("frame:: ", frame);
     OS_Message[] messagesToEmit = [];
     bool isAck = frame.isAckFrame();
     bool isResetInd = frame.isResetInd();
@@ -44,7 +41,6 @@ class Baos {
         _ackReceived = true;
       }
     } else if (isResetInd) {
-      //writeln("frame received: resetInd");
       currentParity = FT12FrameParity.unknown;
       // send acknowledge
       FT12Frame ackFrame;
@@ -54,8 +50,6 @@ class Baos {
       _resetInd = true;
     } else  if (isDataFrame) {
       OS_Message result = OS_Protocol.processIncomingMessage(frame.payload);
-      //writeln("is data frame");
-      //writeln(result);
       // send reset request
       FT12Frame ackFrame;
       ackFrame.type = FT12FrameType.ackFrame;
@@ -63,12 +57,10 @@ class Baos {
       com.write(ackBuffer);
 
       if (result.direction == OS_MessageDirection.indication) {
-        //writeln("is indication");
         // return message
         _ind.length++;
         _ind[$-1] = result;
       } else if(result.direction == OS_MessageDirection.response) {
-        //writeln("is response");
         // if sometimes 0xe5 is not received
         _ackReceived = true;
         _responseReceived = true;
@@ -140,7 +132,6 @@ class Baos {
         try {
           processIncomingData();
           if (_resetInd) {
-            //writeln("reset indication was received");
             _response.success = false;
             _response.service = OS_Services.unknown;
             _response.error = new Exception("unknown error");

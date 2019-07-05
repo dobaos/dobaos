@@ -61,9 +61,7 @@ class Dsm {
         req_handler(jreq, &sendResponse);
       } catch(Exception e) {
         //writeln("error parsing json: %s ", e.msg);
-      } finally {
-        //writeln("finally..");
-      }
+      } 
     }
     sub = new Subscriber(redis_host, redis_port);
     writeln("Subscribing to ", req_channel);

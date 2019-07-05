@@ -518,7 +518,6 @@ class DatapointSdk {
       if (val.service == OS_Services.SetDatapointValueRes && val.success) {
         res = true;
       } else {
-        //writeln("values: bad:: ", val.error.message);
         throw val.error;
       }
     } else if (payload.type() == JSONType.array) {
@@ -698,14 +697,12 @@ class DatapointSdk {
         switch(descriptions[dv.id].type) {
           case OS_DatapointType.dpt1:
             _res["value"] = DPT1.toBoolean(dv.value);
-            //writeln("boo: ", _res["id"], "=", _res["value"]);
             break;
           case OS_DatapointType.dpt5:
             _res["value"] = DPT5.toUByte(dv.value);
             break;
           case OS_DatapointType.dpt9:
             _res["value"] = DPT9.toFloat(dv.value);
-            //writeln("float: ", _res["id"], "=", _res["value"]);
             break;
           default:
             writeln("unknown yet dtp");
@@ -730,7 +727,6 @@ class DatapointSdk {
     writeln("Loading server items");
     if (serverItemMessage.service == OS_Services.GetServerItemRes) {
       foreach(OS_ServerItem si; serverItemMessage.server_items) {
-        //writeln(si);
         // maximum buffer size
         if (si.id == 14) {
           SI_currentBufferSize = si.value.read!ushort();
@@ -753,11 +749,9 @@ class DatapointSdk {
       if (MAX_DATAPOINT_NUM - start <= number) {
         number = cast(ushort) (MAX_DATAPOINT_NUM - start + 1);
       }
-      //writeln("start-number: ", start, "-", number);
       auto descr = baos.GetDatapointDescriptionReq(start, number);
       if (descr.success) {
         foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
-          //writeln("here comes description #", dd.id, "[", dd.type, "] ");
           descriptions[dd.id] = dd;
           count++;
         }
@@ -765,7 +759,6 @@ class DatapointSdk {
         // there will be a lot of baos erros, 
         // if there is datapoints no configured
         // and so ignore them
-        //writeln("here comes error:", start, "-", number,": ", descr.error.message);
       }
       start += number;
     }

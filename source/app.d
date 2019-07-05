@@ -19,8 +19,8 @@ void main()
 {
   StopWatch sw;
   sw.start();
-  auto sdk = new DatapointSdk();
-  auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, "hello", "friend");
+  auto sdk = new DatapointSdk("/dev/ttyS1", "19200:8E1");
+  auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, "dobaos_req", "dobaos_cast");
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     JSONValue res;
 
