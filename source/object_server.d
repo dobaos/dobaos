@@ -326,49 +326,42 @@ class OS_Protocol {
       if (mainService == OS_MainService) {
         switch(subService) {
           case OS_Services.GetServerItemRes:
-            //writeln("GetServerItemRes");
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.GetServerItemRes;
             result.success = true;
             result.server_items = _processServerItemRes(data);
             break;
+          case OS_Services.SetServerItemRes:
+            result.direction = OS_MessageDirection.response;
+            result.service= OS_Services.SetServerItemRes;
+            result.success = true;
+            _assertSuccess(data);
+            break;
           case OS_Services.ServerItemInd:
-            //writeln("ServerItemInd");
             result.direction = OS_MessageDirection.indication;
             result.service= OS_Services.ServerItemInd;
             result.success = true;
             result.server_items = _processServerItemRes(data);
             break;
           case OS_Services.GetDatapointDescriptionRes:
-            //writeln("GetDatapointDescriptionRes");
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.GetDatapointDescriptionRes;
             result.success = true;
             result.datapoint_descriptions = _processGetDatapointDescriptionRes(data);
             break;
           case OS_Services.GetDatapointValueRes:
-            //writeln("GetDatapointValueRes");
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.GetDatapointValueRes;
             result.success = true;
             result.datapoint_values = _processDatapointValueRes(data);
             break;
           case OS_Services.SetDatapointValueRes:
-            //writeln("SetDatapointValueRes:", data);
             result.direction = OS_MessageDirection.response;
             result.service= OS_Services.SetDatapointValueRes;
             result.success = true;
             _assertSuccess(data);
             break;
-          case OS_Services.SetServerItemRes:
-            writeln("SetServerItemRes:", data);
-            result.direction = OS_MessageDirection.response;
-            result.service= OS_Services.SetServerItemRes;
-            result.success = true;
-            _assertSuccess(data);
-            break;
           case OS_Services.DatapointValueInd:
-            //writeln("DatapointValueInd");
             result.service= OS_Services.DatapointValueInd;
             result.direction = OS_MessageDirection.indication;
             result.success = true;
@@ -463,8 +456,7 @@ class OS_Protocol {
     int c = header_length; 
     foreach(OS_DatapointValue value; values) {
       result.write!ushort(value.id, c);
-      // command: set and send
-      // TODO: command in params
+      // command: set, send, set and send, read 
       ubyte command = cast(ubyte) value.command;
       result.write!ubyte(command, c + 2);
 
@@ -479,7 +471,6 @@ class OS_Protocol {
     return result;
   }
   static ubyte[] SetServerItemReq(OS_ServerItem[] items) {
-    //writeln("object_server.SetServerItemReq: ", items);
     ubyte[] result;
     // max len
     ubyte header_length = 6;
