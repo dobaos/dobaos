@@ -49,7 +49,7 @@ class DPT9 {
   static public ubyte[] toUBytes(float value) {
     auto sign = 0x00;
     /***
-    float exp = floor(max((log(abs(value) * 100) / log(2)) - 10, 0));
+    float exp = cast(float) floor(max((log(abs(value) * 100) / log(2)) - 10, 0));
     float mant = (value * 100) / (1 << cast(int)exp);
 
     if (value < 0) {
@@ -95,3 +95,85 @@ class DPT5 {
     return res;
   }
 }
+
+class DPT2 {
+  static public bool[string] toDecoded(ubyte[] raw) {
+    bool[string] result;
+    result["control"] = false;
+    result["value"] = false;
+
+    return result;
+  }
+  static public ubyte[] toUBytes(bool[string] value) {
+    ubyte[] result;
+    result.length = 1;
+    
+    return result;
+  }
+}
+
+class DPT3 {
+  static public ubyte[string] toDecoded(ubyte[] raw) {
+    ubyte[string] result;
+
+    return result;
+  }
+  static public ubyte[] toUBytes(ubyte[string] value) {
+    ubyte[] result;
+
+    return result;
+  }
+}
+
+class DPT4 {
+  static public char toChar(ubyte[] raw) {
+    char result;
+
+    return result;
+  }
+  static public ubyte[] toUBytes(char value) {
+    ubyte[] result;
+
+    return result;
+  }
+}
+
+class DPT6 {
+  static public byte toByte(ubyte[] raw) {
+    byte result;
+
+    return result;
+  }
+  static public ubyte[] toUBytes(byte value) {
+    ubyte[] result;
+
+    return result;
+  }
+}
+
+class DPT7 {
+  static public ushort toUShort(ubyte[] raw) {
+    ushort result;
+
+    return result;
+  }
+  static public ubyte[] toUBytes(ushort value) {
+    ubyte[] result;
+
+    return result;
+  }
+}
+
+class DPT8 {
+  static public short toShort(ubyte[] raw) {
+    short result;
+
+    return result;
+  }
+  static public ubyte[] toUBytes(short value) {
+    ubyte[] result;
+
+    return result;
+  }
+}
+
