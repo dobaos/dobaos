@@ -28,3 +28,38 @@ dub
 ```
 
 if everything is ok, process will start
+
+## General info
+
+This app provides software interface to work with Weinzierl BAOS modules(830/838 kBerry/..). 
+
+What this process do, step by step:
+
+1. Connect to serialport.
+2. Load server item [Current Buffer Size].
+3. Load all configured datapoint descriptions. 
+4. Connect to redis.
+5. Subscribe to request channel.
+6. while(true): receive uart messages, receive redis messages.
+On uart message: broadcast datapoint value.
+On redis message: parse JSON, send request to UART, send response.
+
+## Protocol
+
+```text
+{
+  "response_channel": "",
+  "method": "api name",
+  "payload": ...
+}
+```
+
+### methods:
+
+#### get description
+#### get value
+#### set value
+#### read value
+#### get programming mode
+#### set programming mode
+
