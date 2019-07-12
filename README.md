@@ -41,15 +41,31 @@ What this process do, step by step:
 4. Connect to redis.
 5. Subscribe to request channel.
 6. while(true): receive uart messages, receive redis messages.
+
 On uart message: broadcast datapoint value.
-On redis message: parse JSON, send request to UART, send response.
+On redis message: parse JSON, send request to UART, then respond.
 
 ## Protocol
+
+JSON messages should be sent to request channel.
 
 ```text
 {
   "response_channel": "",
   "method": "api name",
+  "payload": ...
+}
+```
+
+This three fields are required. If one of them is not found in message, request will be declined.
+
+Response is sent to "response_channel", therefore, client should be subscribed, before sending request.
+
+Response: 
+
+```text
+{
+  "method": "success"/"error",
   "payload": ...
 }
 ```
@@ -63,3 +79,7 @@ On redis message: parse JSON, send request to UART, send response.
 #### get programming mode
 #### set programming mode
 
+## TODO
+
+1. more datapoint types support.
+2. not all methods compared to bobaos.pub are implemented yet
