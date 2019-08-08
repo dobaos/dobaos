@@ -100,10 +100,10 @@ Possible payload:
 
   *`Object` - for one datapoint in range 1-1000
   
-    `{ id: Number, value: <Value> }` or
-    
-    `{ id: Number, raw: String }`
-    
+  `{ id: Number, value: <Value> }` or
+
+  `{ id: Number, raw: String }`
+
   * `Array` of `Object` - for multiple datapoints
 
 Datapoint value is automatically converted to configured in ETS dpt.
