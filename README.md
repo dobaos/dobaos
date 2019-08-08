@@ -52,7 +52,7 @@ JSON messages should be sent to request channel.
 ```text
 {
   "response_channel": "",
-  "method": "api name",
+  "method": "...",
   "payload": ...
 }
 ```
@@ -60,6 +60,7 @@ JSON messages should be sent to request channel.
 This three fields are required. If one of them is not found in message, request will be declined.
 
 Response is sent to "response_channel", therefore, client should be subscribed, before sending request.
+Good practice is to select channel prefix name, e.g. `client_listener_ch` and use Redis command `PSUBSCRIBE client_listener_ch_*`. Generate random number, add to that prefix and send as a response_channel value.
 
 Response: 
 
@@ -70,16 +71,74 @@ Response:
 }
 ```
 
+
 ### methods:
 
 #### get description
+
+Get description for selected datapoints.
+Possible payload: 
+  * `null` - for all datapoints,
+  * `Number` - for one datapoint in range 1-1000
+  * `Array` of `Number` - for multiple datapoints
+
 #### get value
+
+Get value for selected datapoints.
+
+Possible payload:
+
+  * `null` - for all datapoints,
+  * `Number` - for one datapoint in range 1-1000
+  * `Array` of `Number` - for multiple datapoints
+
 #### set value
+
+Set value for selected datapoints.
+
+Possible payload:
+
+  *`Object` - for one datapoint in range 1-1000
+  
+    `{ id: Number, value: <Value> }` or
+    
+    `{ id: Number, raw: String }`
+    
+  * `Array` of `Object` - for multiple datapoints
+
+Datapoint value is automatically converted to configured in ETS dpt.
+Keep in mind that not all datapoints supported right now and there is a long way to add support.
+
 #### read value
+
+Send read value request for selected datapoints.
+Possible payload: 
+  `null` - for all datapoints,
+  `Number` - for one datapoint in range 1-1000
+  `Array` of `Number` - for multiple datapoints
+
+Keep in mind that datapoint should have UPDATE flag.
+
 #### get programming mode
+
+Get information if BAOS module in programming mode.
+
+Request payload: `null`.
+
+Returns `true/false`.
+
 #### set programming mode
+
+Set programming mode of BAOS module.
+
+Possible payload: `true/false/1/0`
+
+### broadcasts
+
+There is messages broadcasted to `bcast_channel` on incoming datapoint values or when `set value` method was successfully called.
 
 ## TODO
 
 1. more datapoint types support.
 2. not all methods compared to bobaos.pub are implemented yet
+3. service reset method
