@@ -98,7 +98,7 @@ Set value for selected datapoints.
 
 Possible payload:
 
-  *`Object` - for one datapoint in range 1-1000
+  * `Object` - for one datapoint in range 1-1000
   
   `{ id: Number, value: <Value> }` or
 
@@ -112,10 +112,11 @@ Keep in mind that not all datapoints supported right now and there is a long way
 #### read value
 
 Send read value request for selected datapoints.
+
 Possible payload: 
-  `null` - for all datapoints,
-  `Number` - for one datapoint in range 1-1000
-  `Array` of `Number` - for multiple datapoints
+  * `null` - for all datapoints,
+  * `Number` - for one datapoint in range 1-1000
+  * `Array` of `Number` - for multiple datapoints
 
 Keep in mind that datapoint should have UPDATE flag.
 
