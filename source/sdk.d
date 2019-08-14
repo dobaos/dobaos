@@ -45,8 +45,26 @@ class DatapointSdk {
       case OS_DatapointType.dpt1:
         res["value"] = DPT1.toBoolean(dv.value);
         break;
+      case OS_DatapointType.dpt2:
+        res["value"] = DPT2.toDecoded(dv.value);
+        break;
+      case OS_DatapointType.dpt3:
+        res["value"] = DPT3.toDecoded(dv.value);
+        break;
+      case OS_DatapointType.dpt4:
+        res["value"] = DPT4.toChar(dv.value);
+        break;
       case OS_DatapointType.dpt5:
         res["value"] = DPT5.toUByte(dv.value);
+        break;
+      case OS_DatapointType.dpt6:
+        res["value"] = DPT6.toByte(dv.value);
+        break;
+      case OS_DatapointType.dpt7:
+        res["value"] = DPT7.toUShort(dv.value);
+        break;
+      case OS_DatapointType.dpt8:
+        res["value"] = DPT8.toShort(dv.value);
         break;
       case OS_DatapointType.dpt9:
         res["value"] = DPT9.toFloat(dv.value);
@@ -96,7 +114,6 @@ class DatapointSdk {
       auto _value = value["value"];
       switch(dpt) {
         case OS_DatapointType.dpt1:
-          // TODO: check type. true/false/int(0-1)/...
           bool _val = true;
           if (_value.type() == JSONType.false_) {
             _val = false;
@@ -112,8 +129,89 @@ class DatapointSdk {
           res.value = DPT1.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
           break;
+        case OS_DatapointType.dpt2:
+          bool _val = true;
+          bool _ctrl = true;
+          bool[string] _val_ctrl;
+          if (_value.type() == JSONType.object) {
+            if (!("control" in _value) || !("value" in _value)) {
+              throw Errors.wrong_value;
+            }
+            if (value["control"].type() == JSONType.false_) {
+              _ctrl = false;
+            } else if (value["control"].type == JSONType.integer) {
+              _ctrl = value["control"].integer != 0;
+            } else if (value["control"].type == JSONType.uinteger) {
+              _ctrl = value["control"].uinteger != 0;
+            } else if (value["control"].type == JSONType.float_) {
+              _ctrl = value["control"].floating != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (value["value"].type() == JSONType.false_) {
+              _val = false;
+            } else if (value["value"].type == JSONType.integer) {
+              _val = value["value"].integer != 0;
+            } else if (value["value"].type == JSONType.uinteger) {
+              _val = value["value"].uinteger != 0;
+            } else if (value["value"].type == JSONType.float_) {
+              _val = value["value"].floating != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            
+            _val_ctrl["control"] = _ctrl;
+            _val_ctrl["value"] = _val;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+          res.value = DPT2.toUBytes(_val_ctrl);
+          res.length = cast(ubyte) res.value.length;
+          break;
+        case OS_DatapointType.dpt3:
+          ubyte _dir = 1;
+          ubyte _step = 1;
+          ubyte[string] _dir_step;
+          if (_value.type() == JSONType.object) {
+            if (!("direction" in _value) || !("steo" in _value)) {
+              throw Errors.wrong_value;
+            }
+            if (value["direction"].type == JSONType.integer) {
+              _dir = cast(ubyte) value["direction"].integer;
+            } else if (value["direction"].type == JSONType.uinteger) {
+              _dir = cast(ubyte) value["direction"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+
+            if (value["step"].type == JSONType.integer) {
+              _step = cast(ubyte) value["step"].integer;
+            } else if (value["step"].type == JSONType.uinteger) {
+              _step = cast(ubyte) value["step"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            
+            _dir_step["direction"] = _dir;
+            _dir_step["step"] = _step;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+          res.value = DPT3.toUBytes(_dir_step);
+          res.length = cast(ubyte) res.value.length;
+          break;
+        case OS_DatapointType.dpt4:
+          char _char;
+          if (_value.type() == JSONType.string) {
+            _char = cast(char) _value.str[0];
+          } else {
+            throw Errors.wrong_value_type;
+          }
+
+          res.value = DPT4.toUBytes(_char);
+          res.length = cast(ubyte)res.value.length;
+          break;
         case OS_DatapointType.dpt5:
-          // TODO: check type. true/false/int(0-1)/...
           ubyte _val;
           if (_value.type() == JSONType.integer) {
             if (_value.integer < 0 || _value.integer > 255) {
@@ -130,6 +228,63 @@ class DatapointSdk {
           }
 
           res.value = DPT5.toUBytes(_val);
+          res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt6:
+          byte _val;
+          if (_value.type() == JSONType.integer) {
+            if (_value.integer < -127 || _value.integer > 127) {
+              throw Errors.wrong_value;
+            }
+            _val = cast(byte) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            if (_value.uinteger < -127 || _value.uinteger > 127) {
+              throw Errors.wrong_value;
+            }
+            _val = cast(byte) _value.uinteger;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+
+          res.value = DPT6.toUBytes(_val);
+          res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt7:
+          ushort _val;
+          if (_value.type() == JSONType.integer) {
+            if (_value.integer < 0 || _value.integer > 65535) {
+              throw Errors.wrong_value;
+            }
+            _val = cast(ushort) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            if (_value.integer < 0 || _value.uinteger > 65535) {
+              throw Errors.wrong_value;
+            }
+            _val = cast(ushort) _value.uinteger;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+
+          res.value = DPT7.toUBytes(_val);
+          res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt8:
+          short _val;
+          if (_value.type() == JSONType.integer) {
+            if (_value.integer < -32768 || _value.integer > 32768) {
+              throw Errors.wrong_value;
+            }
+            _val = cast(ushort) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            if (_value.uinteger < -32768 || _value.uinteger > 32768) {
+              throw Errors.wrong_value;
+            }
+            _val = cast(ushort) _value.uinteger;
+          }  else {
+            throw Errors.wrong_value_type;
+          }
+
+          res.value = DPT8.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
           break;
         case OS_DatapointType.dpt9:
