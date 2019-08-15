@@ -155,28 +155,31 @@ class DatapointSdk {
           bool _ctrl = true;
           bool[string] _val_ctrl;
           if (_value.type() == JSONType.object) {
-            if (!("control" in _value) || !("value" in _value)) {
+            bool _fieldsInvalid = false;
+            _fieldsInvalid = _fieldsInvalid || ("control" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("value" in _value) is null;
+            if (_fieldsInvalid) {
               throw Errors.wrong_value;
             }
-            if (value["control"].type() == JSONType.false_) {
+            if (_value["control"].type() == JSONType.false_) {
               _ctrl = false;
-            } else if (value["control"].type == JSONType.integer) {
-              _ctrl = value["control"].integer != 0;
-            } else if (value["control"].type == JSONType.uinteger) {
-              _ctrl = value["control"].uinteger != 0;
-            } else if (value["control"].type == JSONType.float_) {
-              _ctrl = value["control"].floating != 0;
+            } else if (_value["control"].type == JSONType.integer) {
+              _ctrl = _value["control"].integer != 0;
+            } else if (_value["control"].type == JSONType.uinteger) {
+              _ctrl = _value["control"].uinteger != 0;
+            } else if (_value["control"].type == JSONType.float_) {
+              _ctrl = _value["control"].floating != 0;
             } else {
               throw Errors.wrong_value;
             }
-            if (value["value"].type() == JSONType.false_) {
+            if (_value["value"].type() == JSONType.false_) {
               _val = false;
-            } else if (value["value"].type == JSONType.integer) {
-              _val = value["value"].integer != 0;
-            } else if (value["value"].type == JSONType.uinteger) {
-              _val = value["value"].uinteger != 0;
-            } else if (value["value"].type == JSONType.float_) {
-              _val = value["value"].floating != 0;
+            } else if (_value["value"].type == JSONType.integer) {
+              _val = _value["value"].integer != 0;
+            } else if (_value["value"].type == JSONType.uinteger) {
+              _val = _value["value"].uinteger != 0;
+            } else if (_value["value"].type == JSONType.float_) {
+              _val = _value["value"].floating != 0;
             } else {
               throw Errors.wrong_value;
             }
@@ -194,21 +197,24 @@ class DatapointSdk {
           ubyte _step = 1;
           ubyte[string] _dir_step;
           if (_value.type() == JSONType.object) {
-            if (!("direction" in _value) || !("step" in _value)) {
+            bool _fieldsInvalid = false;
+            _fieldsInvalid = _fieldsInvalid || ("direction" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("step" in _value) is null;
+            if (_fieldsInvalid) {
               throw Errors.wrong_value;
             }
-            if (value["direction"].type == JSONType.integer) {
-              _dir = (value["direction"].integer != 0) ? 1: 0;
-            } else if (value["direction"].type == JSONType.uinteger) {
-              _dir = (value["direction"].uinteger != 0)? 1: 0;
+            if (_value["direction"].type == JSONType.integer) {
+              _dir = (_value["direction"].integer != 0) ? 1: 0;
+            } else if (_value["direction"].type == JSONType.uinteger) {
+              _dir = (_value["direction"].uinteger != 0)? 1: 0;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (value["step"].type == JSONType.integer) {
-              _step = cast(ubyte) value["step"].integer;
-            } else if (value["step"].type == JSONType.uinteger) {
-              _step = cast(ubyte) value["step"].uinteger;
+            if (_value["step"].type == JSONType.integer) {
+              _step = cast(ubyte) _value["step"].integer;
+            } else if (_value["step"].type == JSONType.uinteger) {
+              _step = cast(ubyte) _value["step"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -328,14 +334,18 @@ class DatapointSdk {
           ubyte _seconds = 0;
           ubyte[string] _time;
           if (_value.type() == JSONType.object) {
-            if (!("day" in _value) || !("hour" in _value) ||
-                !("minutes" in _value) || !("seconds" in value)) {
+            bool _fieldsInvalid = false;
+            _fieldsInvalid = _fieldsInvalid || ("day" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("hour" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("minutes" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("seconds" in _value) is null;
+            if (_fieldsInvalid) {
               throw Errors.wrong_value;
             }
-            if (value["day"].type == JSONType.integer) {
-              _day = cast(ubyte) value["day"].integer;
-            } else if (value["day"].type == JSONType.uinteger) {
-              _day = cast(ubyte) value["day"].uinteger;
+            if (_value["day"].type == JSONType.integer) {
+              _day = cast(ubyte) _value["day"].integer;
+            } else if (_value["day"].type == JSONType.uinteger) {
+              _day = cast(ubyte) _value["day"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -343,10 +353,10 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
 
-            if (value["hour"].type == JSONType.integer) {
-              _hour = cast(ubyte) value["hour"].integer;
-            } else if (value["hour"].type == JSONType.uinteger) {
-              _hour = cast(ubyte) value["hour"].uinteger;
+            if (_value["hour"].type == JSONType.integer) {
+              _hour = cast(ubyte) _value["hour"].integer;
+            } else if (_value["hour"].type == JSONType.uinteger) {
+              _hour = cast(ubyte) _value["hour"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -354,10 +364,10 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
 
-            if (value["minutes"].type == JSONType.integer) {
-              _minutes = cast(ubyte) value["minutes"].integer;
-            } else if (value["minutes"].type == JSONType.uinteger) {
-              _minutes = cast(ubyte) value["minutes"].uinteger;
+            if (_value["minutes"].type == JSONType.integer) {
+              _minutes = cast(ubyte) _value["minutes"].integer;
+            } else if (_value["minutes"].type == JSONType.uinteger) {
+              _minutes = cast(ubyte) _value["minutes"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -365,14 +375,15 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
 
-            if (value["seconds"].type == JSONType.integer) {
-              _seconds = cast(ubyte) value["seconds"].integer;
-            } else if (value["seconds"].type == JSONType.uinteger) {
-              _seconds = cast(ubyte) value["seconds"].uinteger;
+            if (_value["seconds"].type == JSONType.integer) {
+              _seconds = cast(ubyte) _value["seconds"].integer;
+            } else if (_value["seconds"].type == JSONType.uinteger) {
+              _seconds = cast(ubyte) _value["seconds"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
             if (_seconds < 0 || _seconds > 59) {
+              writeln("err6");
               throw Errors.wrong_value;
             }
             
@@ -392,15 +403,18 @@ class DatapointSdk {
           ushort _year = 0;
           ushort[string] _date;
           if (_value.type() == JSONType.object) {
-            if (!("day" in _value) || !("month" in _value) ||
-                !("year" in _value)) {
+            bool _fieldsInvalid = false;
+            _fieldsInvalid = _fieldsInvalid || ("day" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("month" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("year" in _value) is null;
+            if (_fieldsInvalid) {
               throw Errors.wrong_value;
             }
 
-            if (value["day"].type == JSONType.integer) {
-              _day = cast(ushort) value["day"].integer;
-            } else if (value["day"].type == JSONType.uinteger) {
-              _day = cast(ushort) value["day"].uinteger != 0;
+            if (_value["day"].type == JSONType.integer) {
+              _day = cast(ushort) _value["day"].integer;
+            } else if (_value["day"].type == JSONType.uinteger) {
+              _day = cast(ushort) _value["day"].uinteger != 0;
             } else {
               throw Errors.wrong_value;
             }
@@ -408,10 +422,10 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
 
-            if (value["month"].type == JSONType.integer) {
-              _month = cast(ushort) value["month"].integer;
-            } else if (value["month"].type == JSONType.uinteger) {
-              _month = cast(ushort) value["month"].uinteger;
+            if (_value["month"].type == JSONType.integer) {
+              _month = cast(ushort) _value["month"].integer;
+            } else if (_value["month"].type == JSONType.uinteger) {
+              _month = cast(ushort) _value["month"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -419,10 +433,10 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
 
-            if (value["year"].type == JSONType.integer) {
-              _year = cast(ushort) value["year"].integer;
-            } else if (value["year"].type == JSONType.uinteger) {
-              _year = cast(ushort) value["year"].uinteger;
+            if (_value["year"].type == JSONType.integer) {
+              _year = cast(ushort) _value["year"].integer;
+            } else if (_value["year"].type == JSONType.uinteger) {
+              _year = cast(ushort) _value["year"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -507,24 +521,27 @@ class DatapointSdk {
           ubyte _num = 1;
           ubyte[string] _learn_num;
           if (_value.type() == JSONType.object) {
-            if (!("learn" in _value) || !("number" in _value)) {
+            bool _fieldsInvalid = false;
+            _fieldsInvalid = _fieldsInvalid || ("learn" in _value) is null;
+            _fieldsInvalid = _fieldsInvalid || ("number" in _value) is null;
+            if (_fieldsInvalid) {
               throw Errors.wrong_value;
             }
 
-            if (value["learn"].type == JSONType.false_) {
+            if (_value["learn"].type == JSONType.false_) {
               _learn = 0;
-            } else if (value["learn"].type == JSONType.integer) {
-              _learn = (value["learn"].integer != 0)? 1: 0;
-            } else if (value["learn"].type == JSONType.uinteger) {
-              _learn = (value["learn"].uinteger != 0)? 1: 0;
+            } else if (_value["learn"].type == JSONType.integer) {
+              _learn = (_value["learn"].integer != 0)? 1: 0;
+            } else if (_value["learn"].type == JSONType.uinteger) {
+              _learn = (_value["learn"].uinteger != 0)? 1: 0;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (value["number"].type == JSONType.integer) {
-              _num = cast(ubyte) value["step"].integer;
-            } else if (value["number"].type == JSONType.uinteger) {
-              _num = cast(ubyte) value["number"].uinteger;
+            if (_value["number"].type == JSONType.integer) {
+              _num = cast(ubyte) _value["step"].integer;
+            } else if (_value["number"].type == JSONType.uinteger) {
+              _num = cast(ubyte) _value["number"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
