@@ -329,10 +329,10 @@ class DPT16 {
   static public char[] toString(ubyte[] raw) {
     char[] result;
 
-    auto maxLen = max(raw.length, 14);
-    result.length = maxLen;
+    auto len = min(raw.length, 14);
+    result.length = len;
 
-    for (auto i = 0; i < raw.length; i+= 1) {
+    for (auto i = 0; i < len; i+= 1) {
       result[i] = cast(char) raw[i] & 0x7f;
     }
 
@@ -341,11 +341,10 @@ class DPT16 {
   static public ubyte[] toUBytes(char[] value) {
     ubyte[] result;
 
-    auto maxLen = max(value.length, 14);
+    result.length = 14;
 
-    result.length = maxLen;
-
-    for (auto i = 0; i < maxLen; i+= 1) {
+    auto len = min(value.length, result.length);
+    for (auto i = 0; i < len; i+= 1) {
       result[i] = cast(ubyte) value[i];
     }
 

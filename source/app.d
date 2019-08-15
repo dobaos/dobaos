@@ -96,8 +96,8 @@ void main()
               _jvalue["raw"] = value["raw"];
               _jvalue["value"] = value["value"];
               jcast["payload"] = _jvalue;
+              dsm.broadcast(jcast);
             }
-            dsm.broadcast(jcast);
           }
         } catch(Exception e) {
           res["method"] = "error";
