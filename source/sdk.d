@@ -69,6 +69,21 @@ class DatapointSdk {
       case OS_DatapointType.dpt9:
         res["value"] = DPT9.toFloat(dv.value);
         break;
+      case OS_DatapointType.dpt10:
+        res["value"] = DPT10.toTime(dv.value);
+        break;
+      case OS_DatapointType.dpt11:
+        res["value"] = DPT11.toDate(dv.value);
+        break;
+      case OS_DatapointType.dpt12:
+        res["value"] = DPT12.toUInt(dv.value);
+        break;
+      case OS_DatapointType.dpt13:
+        res["value"] = DPT13.toInt(dv.value);
+        break;
+      case OS_DatapointType.dpt14:
+        res["value"] = DPT14.toFloat(dv.value);
+        break;
       default:
         break;
     }
@@ -173,7 +188,7 @@ class DatapointSdk {
           ubyte _step = 1;
           ubyte[string] _dir_step;
           if (_value.type() == JSONType.object) {
-            if (!("direction" in _value) || !("steo" in _value)) {
+            if (!("direction" in _value) || !("step" in _value)) {
               throw Errors.wrong_value;
             }
             if (value["direction"].type == JSONType.integer) {
@@ -214,17 +229,14 @@ class DatapointSdk {
         case OS_DatapointType.dpt5:
           ubyte _val;
           if (_value.type() == JSONType.integer) {
-            if (_value.integer < 0 || _value.integer > 255) {
-              throw Errors.wrong_value;
-            }
             _val = cast(ubyte) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
-            if (_value.uinteger > 255) {
-              throw Errors.wrong_value;
-            }
             _val = cast(ubyte) _value.uinteger;
           } else {
             throw Errors.wrong_value_type;
+          }
+          if (_val < 0 || _val > 255) {
+            throw Errors.wrong_value;
           }
 
           res.value = DPT5.toUBytes(_val);
@@ -233,17 +245,15 @@ class DatapointSdk {
         case OS_DatapointType.dpt6:
           byte _val;
           if (_value.type() == JSONType.integer) {
-            if (_value.integer < -127 || _value.integer > 127) {
-              throw Errors.wrong_value;
-            }
             _val = cast(byte) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
-            if (_value.uinteger < -127 || _value.uinteger > 127) {
-              throw Errors.wrong_value;
-            }
             _val = cast(byte) _value.uinteger;
           } else {
             throw Errors.wrong_value_type;
+          }
+
+          if (_val < -127 || _val > 127) {
+            throw Errors.wrong_value;
           }
 
           res.value = DPT6.toUBytes(_val);
@@ -252,16 +262,14 @@ class DatapointSdk {
         case OS_DatapointType.dpt7:
           ushort _val;
           if (_value.type() == JSONType.integer) {
-            if (_value.integer < 0 || _value.integer > 65535) {
-              throw Errors.wrong_value;
-            }
             _val = cast(ushort) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
-            if (_value.integer < 0 || _value.uinteger > 65535) {
-              throw Errors.wrong_value;
-            }
             _val = cast(ushort) _value.uinteger;
           } else {
+            throw Errors.wrong_value_type;
+          }
+
+          if (_val < 0 || _val > 65535) {
             throw Errors.wrong_value_type;
           }
 
@@ -271,17 +279,15 @@ class DatapointSdk {
         case OS_DatapointType.dpt8:
           short _val;
           if (_value.type() == JSONType.integer) {
-            if (_value.integer < -32768 || _value.integer > 32768) {
-              throw Errors.wrong_value;
-            }
             _val = cast(ushort) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
-            if (_value.uinteger < -32768 || _value.uinteger > 32768) {
-              throw Errors.wrong_value;
-            }
             _val = cast(ushort) _value.uinteger;
           }  else {
             throw Errors.wrong_value_type;
+          }
+
+          if (_val < -32768 || _val > 32768) {
+            throw Errors.wrong_value;
           }
 
           res.value = DPT8.toUBytes(_val);
@@ -293,10 +299,187 @@ class DatapointSdk {
             _val = _value.floating;
           } else if (_value.type() == JSONType.integer) {
             _val = cast(float) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            _val = cast(float) _value.uinteger;
           } else {
             throw Errors.wrong_value_type;
           }
+
+          if (_val < -671088.64 || _val > 670761.96) {
+            throw Errors.wrong_value;
+          }
+
           res.value = DPT9.toUBytes(_val);
+          res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt10:
+          ubyte _day = 0;
+          ubyte _hour = 0;
+          ubyte _minutes = 0;
+          ubyte _seconds = 0;
+          ubyte[string] _time;
+          if (_value.type() == JSONType.object) {
+            if (!("day" in _value) || !("hour" in _value) ||
+                !("minutes" in _value) || !("seconds" in value)) {
+              throw Errors.wrong_value;
+            }
+            if (value["day"].type == JSONType.integer) {
+              _day = cast(ubyte) value["day"].integer;
+            } else if (value["day"].type == JSONType.uinteger) {
+              _day = cast(ubyte) value["day"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (_day < 0 || _day > 7) {
+              throw Errors.wrong_value;
+            }
+
+            if (value["hour"].type == JSONType.integer) {
+              _hour = cast(ubyte) value["hour"].integer;
+            } else if (value["hour"].type == JSONType.uinteger) {
+              _hour = cast(ubyte) value["hour"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (_hour < 0 || _hour > 23) {
+              throw Errors.wrong_value;
+            }
+
+            if (value["minutes"].type == JSONType.integer) {
+              _minutes = cast(ubyte) value["minutes"].integer;
+            } else if (value["minutes"].type == JSONType.uinteger) {
+              _minutes = cast(ubyte) value["minutes"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (_minutes < 0 || _minutes > 59) {
+              throw Errors.wrong_value;
+            }
+
+            if (value["seconds"].type == JSONType.integer) {
+              _seconds = cast(ubyte) value["seconds"].integer;
+            } else if (value["seconds"].type == JSONType.uinteger) {
+              _seconds = cast(ubyte) value["seconds"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (_seconds < 0 || _seconds > 59) {
+              throw Errors.wrong_value;
+            }
+            
+            _time["day"] = _day;
+            _time["hour"] = _hour;
+            _time["minutes"] = _minutes;
+            _time["seconds"] = _seconds;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+          res.value = DPT10.toUBytes(_time);
+          res.length = cast(ubyte) res.value.length;
+          break;
+        case OS_DatapointType.dpt11:
+          ushort _day = 0;
+          ushort _month = 0;
+          ushort _year = 0;
+          ushort[string] _date;
+          if (_value.type() == JSONType.object) {
+            if (!("day" in _value) || !("month" in _value) ||
+                !("year" in _value)) {
+              throw Errors.wrong_value;
+            }
+
+            if (value["day"].type == JSONType.integer) {
+              _day = cast(ushort) value["day"].integer;
+            } else if (value["day"].type == JSONType.uinteger) {
+              _day = cast(ushort) value["day"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (_day < 0 || _day > 31) {
+              throw Errors.wrong_value;
+            }
+
+            if (value["month"].type == JSONType.integer) {
+              _month = cast(ushort) value["month"].integer;
+            } else if (value["month"].type == JSONType.uinteger) {
+              _month = cast(ushort) value["month"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (_month < 1 || _month > 12) {
+              throw Errors.wrong_value;
+            }
+
+            if (value["year"].type == JSONType.integer) {
+              _year = cast(ushort) value["year"].integer;
+            } else if (value["year"].type == JSONType.uinteger) {
+              _year = cast(ushort) value["year"].uinteger != 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+            if (_year < 1990 || _year > 2089) {
+              throw Errors.wrong_value;
+            }
+            
+            _date["day"] = _day;
+            _date["month"] = _month;
+            _date["year"] = _year;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+          res.value = DPT11.toUBytes(_date);
+          res.length = cast(ubyte) res.value.length;
+          break;
+        case OS_DatapointType.dpt12:
+          uint _val;
+          if (_value.type() == JSONType.integer) {
+            _val = cast(uint) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            _val = cast(uint) _value.uinteger;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+
+          if (_val < 0 || _val > 4294967295) {
+            throw Errors.wrong_value_type;
+          }
+
+          res.value = DPT12.toUBytes(_val);
+          res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt13:
+          int _val;
+          if (_value.type() == JSONType.integer) {
+            _val = cast(uint) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            _val = cast(uint) _value.uinteger;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+
+          if (_val < -2147483648 || _val > 2147483647) {
+            throw Errors.wrong_value_type;
+          }
+
+          res.value = DPT13.toUBytes(_val);
+          res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt14:
+          float _val;
+          if (_value.type() == JSONType.float_) {
+            _val = _value.floating;
+          } else if (_value.type() == JSONType.integer) {
+            _val = cast(float) _value.integer;
+          } else if (_value.type() == JSONType.uinteger) {
+            _val = cast(float) _value.uinteger;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+
+          // what is a range? not in specs.
+          // TODO: study
+
+          res.value = DPT14.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
           break;
         default:

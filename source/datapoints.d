@@ -213,6 +213,114 @@ class DPT9 {
   }
 }
 
-// TODO:
-// DPT10, 11, 12, 13, 14, 15, 16, 17, 18
+class DPT10 {
+  static public ubyte[string] toTime(ubyte[] raw) {
+    ubyte[string] result;
 
+    result["day"] = cast(ubyte) ((raw[0] & 0xe0) >> 5);
+    result["hour"] = cast(ubyte) (raw[0] & 0x1f);
+    result["munutes"] = cast(ubyte) (raw[1] & 0x3f);
+    result["seconds"] = cast(ubyte) (raw[2] & 0x3f);
+
+    return result;
+  }
+  static public ubyte[] toUBytes(ubyte[string] value) {
+    ubyte[] result;
+
+    result.length = 3;
+    result[0] = cast(ubyte)(result[0] | (value["day"] << 5));
+    result[0] = cast(ubyte)(result[0] | (value["hour"] & 0x1f));
+    result[1] = cast(ubyte)(result[1] | (value["minutes"] & 0x3f));
+    result[2] = cast(ubyte)(result[2] | (value["seconds"] & 0x3f));
+
+    return result;
+  }
+}
+
+class DPT11 {
+  static public ushort[string] toDate(ubyte[] raw) {
+    ushort[string] result;
+
+    result["day"] = cast(ushort) (raw[0] & 0x1f);
+    result["month"] = cast(ushort) (raw[1] & 0x0f);
+    result["year"] = cast(ushort) (raw[2] & 0x7f);
+    if (result["year"] >= 90) {
+      result["year"] += 1900;
+    } else {
+      result["year"] += 2000;
+    }
+
+    return result;
+  }
+  static public ubyte[] toUBytes(ushort[string] value) {
+    ubyte[] result;
+
+    result.length = 3;
+    result[0] = cast(ubyte)(result[0] | (value["day"] & 0x1f));
+    result[1] = cast(ubyte)(result[1] | (value["month"] & 0x0f));
+    ushort year = value["year"];
+    if (year >= 2000) {
+      year -= 2000;
+    } else {
+      year -= 1990;
+    }
+    result[2] = cast(ubyte)(result[2] | (year& 0x7f));
+
+    return result;
+  }
+}
+
+class DPT12 {
+  static public uint toUInt(ubyte[] raw) {
+    uint result;
+
+    result = raw.read!uint();
+
+    return result;
+  }
+  static public ubyte[] toUBytes(uint value) {
+    ubyte[] result;
+
+    result.length = 4;
+    result.write!uint(value, 0);
+
+    return result;
+  }
+}
+
+class DPT13 {
+  static public int toInt(ubyte[] raw) {
+    uint result;
+
+    result = raw.read!int();
+
+    return result;
+  }
+  static public ubyte[] toUBytes(int value) {
+    ubyte[] result;
+
+    result.length = 4;
+    result.write!int(value, 0);
+
+    return result;
+  }
+}
+
+class DPT14 {
+  static public float toFloat(ubyte[] raw) {
+    float result;
+
+    result = raw.read!float();
+
+    return result;
+  }
+  static public ubyte[] toUBytes(float value) {
+    ubyte[] result;
+
+    result.length = 4;
+    result.write!float(value, 0);
+
+    return result;
+  }
+}
+// TODO: DPT16, 18
