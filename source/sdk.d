@@ -555,7 +555,6 @@ class DatapointSdk {
         //assert(val.datapoint_values.length == 1);
         res = convert2JSONValue(val.datapoint_values[0]);
       } else {
-        // TODO: BaosErros(val.error);
         throw val.error;
       }
     } else if (payload.type() == JSONType.array) {
@@ -749,7 +748,6 @@ class DatapointSdk {
         if((id in descriptions) == null) {
           throw Errors.datapoint_not_found;
         }
-        // TODO: handle errors on this stage
         auto rawValue = convert2OSValue(value);
         rawValue.command = OS_DatapointValueCommand.set_and_send;
         rawValues[count] = rawValue;
@@ -1025,30 +1023,15 @@ class DatapointSdk {
       res["method"] = "datapoint value";
       res["payload"] = parseJSON("[]");
       res["payload"].array.length = ind.datapoint_values.length;
-      // example
       auto count = 0;
       foreach(OS_DatapointValue dv; ind.datapoint_values) {
         // convert to json type
         JSONValue _res;
         _res["id"] = dv.id;
         _res["raw"] = Base64.encode(dv.value);
-        switch(descriptions[dv.id].type) {
-          case OS_DatapointType.dpt1:
-            _res["value"] = DPT1.toBoolean(dv.value);
-            break;
-          case OS_DatapointType.dpt5:
-            _res["value"] = DPT5.toUByte(dv.value);
-            break;
-          case OS_DatapointType.dpt9:
-            _res["value"] = DPT9.toFloat(dv.value);
-            break;
-          default:
-            writeln("unknown yet dtp");
-            break;
-        }
+        _res["value"] = convert2JSONValue(dv);
         res["payload"].array[count] = _res;
         count++;
-        // TODO: create ind object {id, value, raw} and return
       }
     }
     // TODO: server ind
