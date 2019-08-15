@@ -219,7 +219,7 @@ class DPT10 {
 
     result["day"] = cast(ubyte) ((raw[0] & 0xe0) >> 5);
     result["hour"] = cast(ubyte) (raw[0] & 0x1f);
-    result["munutes"] = cast(ubyte) (raw[1] & 0x3f);
+    result["minutes"] = cast(ubyte) (raw[1] & 0x3f);
     result["seconds"] = cast(ubyte) (raw[2] & 0x3f);
 
     return result;

@@ -35,7 +35,7 @@ class Dsm {
   }
 
   public void subscribe(void delegate(JSONValue, void delegate(JSONValue)) req_handler) {
-
+    // TODO: service_handler
     // init publisher
     pub = new Redis(redis_host, redis_port);
     // delegate for incoming messages
