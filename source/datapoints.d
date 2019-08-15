@@ -75,7 +75,7 @@ class DPT3 {
     ubyte[string] result;
 
     result["direction"] = (raw[0] & 0x08) >> 3;
-    result["step"] = raw[0] | 0x07;
+    result["step"] = raw[0] & 0x07;
 
     return result;
   }
@@ -92,10 +92,11 @@ class DPT3 {
 }
 
 class DPT4 {
-  static public char toChar(ubyte[] raw) {
-    char result;
+  static public char[] toChar(ubyte[] raw) {
+    char[] result;
 
-    result = cast(char) raw[0] & 0x7f;
+    result.length = 1;
+    result[0] = cast(char) raw[0] & 0x7f;
 
     return result;
   }

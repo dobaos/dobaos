@@ -132,6 +132,23 @@ class DatapointSdk {
       res.value = Base64.decode(value["raw"].str);
       res.length = cast(ubyte)res.value.length;
     } else {
+
+      void assertLongBounds(long val, long low, long high) {
+        if (val < low || val > high) {
+          throw Errors.wrong_value;
+        }
+      }
+      void assertULongBounds(ulong val, ulong low, ulong high) {
+        if (val < low || val > high) {
+          throw Errors.wrong_value;
+        }
+      }
+      void assertFloatBounds(float val, float low, float high) {
+        if (val < low || val > high) {
+          throw Errors.wrong_value;
+        }
+      }
+
       auto _value = value["value"];
       switch(dpt) {
         case OS_DatapointType.dpt1:
@@ -212,8 +229,10 @@ class DatapointSdk {
             }
 
             if (_value["step"].type == JSONType.integer) {
+              assertLongBounds(_value.integer, 0, 7);
               _step = cast(ubyte) _value["step"].integer;
             } else if (_value["step"].type == JSONType.uinteger) {
+              assertULongBounds(_value.uinteger, 0, 7);
               _step = cast(ubyte) _value["step"].uinteger;
             } else {
               throw Errors.wrong_value;
@@ -244,14 +263,13 @@ class DatapointSdk {
         case OS_DatapointType.dpt5:
           ubyte _val;
           if (_value.type() == JSONType.integer) {
+            assertLongBounds(_value.integer, 0, 255);
             _val = cast(ubyte) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
+            assertULongBounds(_value.uinteger, 0, 255);
             _val = cast(ubyte) _value.uinteger;
           } else {
             throw Errors.wrong_value_type;
-          }
-          if (_val < 0 || _val > 255) {
-            throw Errors.wrong_value;
           }
 
           res.value = DPT5.toUBytes(_val);
@@ -260,15 +278,13 @@ class DatapointSdk {
         case OS_DatapointType.dpt6:
           byte _val;
           if (_value.type() == JSONType.integer) {
+            assertULongBounds(_value.integer, -127, 127);
             _val = cast(byte) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
+            assertULongBounds(_value.uinteger, -127, 127);
             _val = cast(byte) _value.uinteger;
           } else {
             throw Errors.wrong_value_type;
-          }
-
-          if (_val < -127 || _val > 127) {
-            throw Errors.wrong_value;
           }
 
           res.value = DPT6.toUBytes(_val);
@@ -277,14 +293,12 @@ class DatapointSdk {
         case OS_DatapointType.dpt7:
           ushort _val;
           if (_value.type() == JSONType.integer) {
+            assertLongBounds(_value.integer, 0, 65535);
             _val = cast(ushort) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
+            assertULongBounds(_value.uinteger, 0, 65535);
             _val = cast(ushort) _value.uinteger;
           } else {
-            throw Errors.wrong_value_type;
-          }
-
-          if (_val < 0 || _val > 65535) {
             throw Errors.wrong_value_type;
           }
 
@@ -294,15 +308,13 @@ class DatapointSdk {
         case OS_DatapointType.dpt8:
           short _val;
           if (_value.type() == JSONType.integer) {
-            _val = cast(ushort) _value.integer;
+            assertLongBounds(_value.integer, -32768, 32768);
+            _val = cast(short) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
-            _val = cast(ushort) _value.uinteger;
+            assertULongBounds(_value.uinteger, -32768, 32768);
+            _val = cast(short) _value.uinteger;
           }  else {
             throw Errors.wrong_value_type;
-          }
-
-          if (_val < -32768 || _val > 32768) {
-            throw Errors.wrong_value;
           }
 
           res.value = DPT8.toUBytes(_val);
@@ -311,17 +323,19 @@ class DatapointSdk {
         case OS_DatapointType.dpt9:
           float _val;
           if (_value.type() == JSONType.float_) {
+            assertFloatBounds(_value.floating, -671088.65, 650761.97);
             _val = _value.floating;
           } else if (_value.type() == JSONType.integer) {
+            assertLongBounds(_value.integer, -671088, 650761);
             _val = cast(float) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
+            assertULongBounds(_value.uinteger, -671088, 650761);
+            if (_value.uinteger < -671088.64 || _value.uinteger > 670761.96) {
+              throw Errors.wrong_value;
+            }
             _val = cast(float) _value.uinteger;
           } else {
             throw Errors.wrong_value_type;
-          }
-
-          if (_val < -671088.64 || _val > 670761.96) {
-            throw Errors.wrong_value;
           }
 
           res.value = DPT9.toUBytes(_val);
@@ -343,47 +357,42 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
             if (_value["day"].type == JSONType.integer) {
+              assertLongBounds(_value["day"].integer, 0, 7);
               _day = cast(ubyte) _value["day"].integer;
             } else if (_value["day"].type == JSONType.uinteger) {
+              assertLongBounds(_value["day"].uinteger, 0, 7);
               _day = cast(ubyte) _value["day"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
-            if (_day < 0 || _day > 7) {
-              throw Errors.wrong_value;
-            }
 
             if (_value["hour"].type == JSONType.integer) {
+              assertLongBounds(_value["hour"].integer, 0, 23);
               _hour = cast(ubyte) _value["hour"].integer;
             } else if (_value["hour"].type == JSONType.uinteger) {
+              assertULongBounds(_value["hour"].uinteger, 0, 23);
               _hour = cast(ubyte) _value["hour"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
-            if (_hour < 0 || _hour > 23) {
-              throw Errors.wrong_value;
-            }
 
             if (_value["minutes"].type == JSONType.integer) {
+              assertLongBounds(_value["minutes"].integer, 0, 59);
               _minutes = cast(ubyte) _value["minutes"].integer;
             } else if (_value["minutes"].type == JSONType.uinteger) {
+              assertULongBounds(_value["minutes"].uinteger, 0, 59);
               _minutes = cast(ubyte) _value["minutes"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
-            if (_minutes < 0 || _minutes > 59) {
-              throw Errors.wrong_value;
-            }
 
             if (_value["seconds"].type == JSONType.integer) {
+              assertLongBounds(_value["seconds"].integer, 0, 59);
               _seconds = cast(ubyte) _value["seconds"].integer;
             } else if (_value["seconds"].type == JSONType.uinteger) {
+              assertULongBounds(_value["seconds"].uinteger, 0, 59);
               _seconds = cast(ubyte) _value["seconds"].uinteger;
             } else {
-              throw Errors.wrong_value;
-            }
-            if (_seconds < 0 || _seconds > 59) {
-              writeln("err6");
               throw Errors.wrong_value;
             }
             
@@ -412,35 +421,32 @@ class DatapointSdk {
             }
 
             if (_value["day"].type == JSONType.integer) {
+              assertLongBounds(_value["day"].integer, 1, 31);
               _day = cast(ushort) _value["day"].integer;
             } else if (_value["day"].type == JSONType.uinteger) {
+              assertULongBounds(_value["day"].uinteger, 1, 31);
               _day = cast(ushort) _value["day"].uinteger != 0;
             } else {
               throw Errors.wrong_value;
             }
-            if (_day < 0 || _day > 31) {
-              throw Errors.wrong_value;
-            }
 
             if (_value["month"].type == JSONType.integer) {
+              assertLongBounds(_value["month"].integer, 1, 12);
               _month = cast(ushort) _value["month"].integer;
             } else if (_value["month"].type == JSONType.uinteger) {
+              assertULongBounds(_value["month"].uinteger, 1, 12);
               _month = cast(ushort) _value["month"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
-            if (_month < 1 || _month > 12) {
-              throw Errors.wrong_value;
-            }
 
             if (_value["year"].type == JSONType.integer) {
+              assertLongBounds(_value["year"].integer, 1990, 2089);
               _year = cast(ushort) _value["year"].integer;
             } else if (_value["year"].type == JSONType.uinteger) {
+              assertULongBounds(_value["year"].uinteger, 1990, 2089);
               _year = cast(ushort) _value["year"].uinteger;
             } else {
-              throw Errors.wrong_value;
-            }
-            if (_year < 1990 || _year > 2089) {
               throw Errors.wrong_value;
             }
             
@@ -450,20 +456,19 @@ class DatapointSdk {
           } else {
             throw Errors.wrong_value_type;
           }
+
           res.value = DPT11.toUBytes(_date);
           res.length = cast(ubyte) res.value.length;
           break;
         case OS_DatapointType.dpt12:
           uint _val;
           if (_value.type() == JSONType.integer) {
+            assertLongBounds(_value.integer, 0, 4294967295);
             _val = cast(uint) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
+            assertULongBounds(_value.uinteger, 0, 4294967295);
             _val = cast(uint) _value.uinteger;
           } else {
-            throw Errors.wrong_value_type;
-          }
-
-          if (_val < 0 || _val > 4294967295) {
             throw Errors.wrong_value_type;
           }
 
@@ -473,14 +478,12 @@ class DatapointSdk {
         case OS_DatapointType.dpt13:
           int _val;
           if (_value.type() == JSONType.integer) {
+            assertLongBounds(_value.integer, -2147483648, 2147483647);
             _val = cast(uint) _value.integer;
           } else if (_value.type() == JSONType.uinteger) {
+            assertULongBounds(_value.uinteger, -2147483648, 2147483647);
             _val = cast(uint) _value.uinteger;
           } else {
-            throw Errors.wrong_value_type;
-          }
-
-          if (_val < -2147483648 || _val > 2147483647) {
             throw Errors.wrong_value_type;
           }
 
