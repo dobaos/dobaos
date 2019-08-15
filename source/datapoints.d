@@ -323,4 +323,52 @@ class DPT14 {
     return result;
   }
 }
-// TODO: DPT16, 18
+
+class DPT16 {
+  static public char[] toString(ubyte[] raw) {
+    char[] result;
+
+    auto maxLen = max(raw.length, 14);
+    result.length = maxLen;
+
+    for (auto i = 0; i < raw.length; i+= 1) {
+      result[i] = cast(char) raw[i] & 0x7f;
+    }
+
+    return result;
+  }
+  static public ubyte[] toUBytes(char[] value) {
+    ubyte[] result;
+
+    auto maxLen = max(value.length, 14);
+
+    result.length = maxLen;
+
+    for (auto i = 0; i < maxLen; i+= 1) {
+      result[i] = cast(ubyte) value[i];
+    }
+
+    return result;
+  }
+}
+
+class DPT18 {
+  static public ubyte[string] toDecoded(ubyte[] raw) {
+    ubyte[string] result;
+
+    result["learn"] = (raw[0] & 0x80) >> 7;
+    result["number"] = raw[0] | 0x7f;
+
+    return result;
+  }
+  static public ubyte[] toUBytes(ubyte[string] value) {
+    ubyte[] result;
+
+    result.length = 1;
+    result[0] = 0x00;
+    result[0] = cast(ubyte) (result[0] | (value["learn"] << 8));
+    result[0] = cast(ubyte) (result[0] | (value["number"] & 0x7f));
+
+    return result;
+  }
+}

@@ -84,6 +84,12 @@ class DatapointSdk {
       case OS_DatapointType.dpt14:
         res["value"] = DPT14.toFloat(dv.value);
         break;
+      case OS_DatapointType.dpt16:
+        res["value"] = DPT16.toString(dv.value);
+        break;
+      case OS_DatapointType.dpt18:
+        res["value"] = DPT18.toDecoded(dv.value);
+        break;
       default:
         break;
     }
@@ -192,9 +198,9 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
             if (value["direction"].type == JSONType.integer) {
-              _dir = cast(ubyte) value["direction"].integer;
+              _dir = (value["direction"].integer != 0) ? 1: 0;
             } else if (value["direction"].type == JSONType.uinteger) {
-              _dir = cast(ubyte) value["direction"].uinteger != 0;
+              _dir = (value["direction"].uinteger != 0)? 1: 0;
             } else {
               throw Errors.wrong_value;
             }
@@ -202,7 +208,7 @@ class DatapointSdk {
             if (value["step"].type == JSONType.integer) {
               _step = cast(ubyte) value["step"].integer;
             } else if (value["step"].type == JSONType.uinteger) {
-              _step = cast(ubyte) value["step"].uinteger != 0;
+              _step = cast(ubyte) value["step"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -218,6 +224,9 @@ class DatapointSdk {
         case OS_DatapointType.dpt4:
           char _char;
           if (_value.type() == JSONType.string) {
+            if (_value.str.length != 1) {
+              throw Errors.wrong_value_type;
+            }
             _char = cast(char) _value.str[0];
           } else {
             throw Errors.wrong_value_type;
@@ -326,7 +335,7 @@ class DatapointSdk {
             if (value["day"].type == JSONType.integer) {
               _day = cast(ubyte) value["day"].integer;
             } else if (value["day"].type == JSONType.uinteger) {
-              _day = cast(ubyte) value["day"].uinteger != 0;
+              _day = cast(ubyte) value["day"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -337,7 +346,7 @@ class DatapointSdk {
             if (value["hour"].type == JSONType.integer) {
               _hour = cast(ubyte) value["hour"].integer;
             } else if (value["hour"].type == JSONType.uinteger) {
-              _hour = cast(ubyte) value["hour"].uinteger != 0;
+              _hour = cast(ubyte) value["hour"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -348,7 +357,7 @@ class DatapointSdk {
             if (value["minutes"].type == JSONType.integer) {
               _minutes = cast(ubyte) value["minutes"].integer;
             } else if (value["minutes"].type == JSONType.uinteger) {
-              _minutes = cast(ubyte) value["minutes"].uinteger != 0;
+              _minutes = cast(ubyte) value["minutes"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -359,7 +368,7 @@ class DatapointSdk {
             if (value["seconds"].type == JSONType.integer) {
               _seconds = cast(ubyte) value["seconds"].integer;
             } else if (value["seconds"].type == JSONType.uinteger) {
-              _seconds = cast(ubyte) value["seconds"].uinteger != 0;
+              _seconds = cast(ubyte) value["seconds"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -402,7 +411,7 @@ class DatapointSdk {
             if (value["month"].type == JSONType.integer) {
               _month = cast(ushort) value["month"].integer;
             } else if (value["month"].type == JSONType.uinteger) {
-              _month = cast(ushort) value["month"].uinteger != 0;
+              _month = cast(ushort) value["month"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -413,7 +422,7 @@ class DatapointSdk {
             if (value["year"].type == JSONType.integer) {
               _year = cast(ushort) value["year"].integer;
             } else if (value["year"].type == JSONType.uinteger) {
-              _year = cast(ushort) value["year"].uinteger != 0;
+              _year = cast(ushort) value["year"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
@@ -481,6 +490,52 @@ class DatapointSdk {
 
           res.value = DPT14.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
+          break;
+        case OS_DatapointType.dpt16:
+          char[] _char;
+          if (_value.type() == JSONType.string) {
+            _char = cast(char[]) _value.str;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+
+          res.value = DPT16.toUBytes(_char);
+          res.length = cast(ubyte) res.value.length;
+          break;
+        case OS_DatapointType.dpt18:
+          ubyte _learn = 1;
+          ubyte _num = 1;
+          ubyte[string] _learn_num;
+          if (_value.type() == JSONType.object) {
+            if (!("learn" in _value) || !("number" in _value)) {
+              throw Errors.wrong_value;
+            }
+
+            if (value["learn"].type == JSONType.false_) {
+              _learn = 0;
+            } else if (value["learn"].type == JSONType.integer) {
+              _learn = (value["learn"].integer != 0)? 1: 0;
+            } else if (value["learn"].type == JSONType.uinteger) {
+              _learn = (value["learn"].uinteger != 0)? 1: 0;
+            } else {
+              throw Errors.wrong_value;
+            }
+
+            if (value["number"].type == JSONType.integer) {
+              _num = cast(ubyte) value["step"].integer;
+            } else if (value["number"].type == JSONType.uinteger) {
+              _num = cast(ubyte) value["number"].uinteger;
+            } else {
+              throw Errors.wrong_value;
+            }
+            
+            _learn_num["learn"] = _learn;
+            _learn_num["number"] = _num;
+          } else {
+            throw Errors.wrong_value_type;
+          }
+          res.value = DPT18.toUBytes(_learn_num);
+          res.length = cast(ubyte) res.value.length;
           break;
         default:
           throw Errors.dpt_not_supported;
