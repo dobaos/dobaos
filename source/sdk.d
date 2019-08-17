@@ -1101,11 +1101,7 @@ class DatapointSdk {
       auto count = 0;
       foreach(OS_DatapointValue dv; ind.datapoint_values) {
         // convert to json type
-        JSONValue _res;
-        _res["id"] = dv.id;
-        _res["raw"] = Base64.encode(dv.value);
-        _res["value"] = convert2JSONValue(dv);
-        res["payload"].array[count] = _res;
+        res["payload"].array[count] = convert2JSONValue(dv);
         count++;
       }
     }
