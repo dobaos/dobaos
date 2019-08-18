@@ -4,6 +4,7 @@
 
 module sdk;
 
+import core.thread;
 import std.algorithm;
 import std.stdio;
 import std.bitmanip;
@@ -1101,8 +1102,32 @@ class DatapointSdk {
       auto count = 0;
       foreach(OS_DatapointValue dv; ind.datapoint_values) {
         // convert to json type
-        res["payload"].array[count] = convert2JSONValue(dv);
-        count++;
+        try {
+          res["payload"].array[count] = convert2JSONValue(dv);
+          count++;
+        } catch(Exception e) {
+          writeln(e);
+          if (e == Errors.datapoint_not_found) {
+            writeln(" ==== Unknown datapoint indication was received ==== ");
+            
+            bool initialized = false;
+            while(!initialized) {
+              // set flags to false.
+              // if bus was connected/disconnected few times
+              // or there was "reset" request
+              // while initializing sdk
+              baos.processInterrupts();
+              baos.processResetInd();
+              // and init
+              initialized = init();
+            }
+          }
+        }
+      }
+      if (count > 0) {
+        res["payload"].array.length = count;
+      } else {
+        res = parseJSON("null");
       }
     }
     // TODO: server ind
@@ -1110,8 +1135,9 @@ class DatapointSdk {
     return res;
   }
 
-  // on reset 
-  void _onReset() {
+  // entry point
+  // load datapoints at very start and reset
+  public bool init() {
     auto serverItemMessage = baos.GetServerItemReq(14, 1);
 
     // maximum buffer size
@@ -1125,10 +1151,16 @@ class DatapointSdk {
           writefln("Current buffer size: %d bytes", SI_currentBufferSize);
         }
       }
+    } else {
+      //writeln("Unknown response to GetServerItemReq");
+
+      return false;
     }
     writeln("Server items loaded");
     writeln("Loading datapoints");
 
+    // clear old datapoint descr if preset
+    descriptions.clear();
     // count for loaded datapoints number
     auto count = 0;
 
@@ -1142,33 +1174,75 @@ class DatapointSdk {
         number = cast(ushort) (MAX_DATAPOINT_NUM - start + 1);
       }
       auto descr = baos.GetDatapointDescriptionReq(start, number);
-      if (descr.success) {
+      if (descr.success && descr.service == OS_Services.GetDatapointDescriptionRes) {
         foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
           descriptions[dd.id] = dd;
           count++;
         }
-      } else {
+      } else  if (!descr.success && descr.service == OS_Services.GetDatapointDescriptionRes) {
         // there will be a lot of baos erros, 
         // if there is datapoints no configured
         // and so ignore them
+      } else if (descr.service == OS_Services.unknown) {
+        //writeln("Unknown response to GetDatapointDescriptionReq");
+
+        return false;
       }
       start += number;
     }
     writefln("Datapoints[%d] loaded.", count);
+
+    return true;
+  }
+
+  public void setInterruptsDelegate(void delegate() interruptsDelegate) {
+    baos.processIncomingInterrupts = interruptsDelegate;
+  }
+  public void resetBaos() {
+    baos.reset();
   }
 
   // on incoming reset req. ETS download/bus dis and then -connected
   public void processResetInd() {
     if (baos.processResetInd()) {
-      writeln("Reset indication was received");
-      _onReset();
+      writeln(" ==== Reset indication was received ==== ");
+      
+      bool initialized = false;
+      while(!initialized) {
+        // set flags to false.
+        // if bus was connected/disconnected few times
+        // or there was second "reset" request
+        // while initializing sdk
+        baos.processInterrupts();
+        baos.processResetInd();
+        // and init
+        initialized = init();
+      }
     }
+  }
+
+  public void processInterrupts() {
+    if (baos.processInterrupts()) {
+      writeln(" ==== Reset request was received ==== ");
+      bool initialized = false;
+      while(!initialized) {
+        // set flags to false.
+        // if there was second "reset" request
+        // or bus was connected/disconnected
+        // while initializing sdk
+        baos.processInterrupts();
+        baos.processResetInd();
+        // and init;
+        initialized = init();
+      }
+    }
+  }
+
+  public void interrupt() {
+    baos.interrupt();
   }
 
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {
     baos = new Baos(device, params);
-
-    // load datapoints at very start
-    _onReset();
   }
 }

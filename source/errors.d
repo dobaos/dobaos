@@ -2,8 +2,10 @@ module errors;
 
 enum Errors {
   unknown = new Exception("ERR_UNKNOWN"),
+  interrupted = new Exception("ERR_INTERRUPTED"),
   no_method_field = new Exception("ERR_NO_METHOD_FIELD"),
   no_payload_field = new Exception("ERR_NO_PAYLOAD_FIELD"),
+  unknown_method = new Exception("ERR_UNKNOWN_METHOD"),
   datapoint_not_found = new Exception("ERR_DATAPOINT_NOT_FOUND"),
   wrong_payload_type = new Exception("ERR_WRONG_PAYLOAD_TYPE"),
   wrong_payload = new Exception("ERR_WRONG_PAYLOAD"),

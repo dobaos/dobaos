@@ -152,6 +152,14 @@ class FT12Helper {
                 // call delegate
                 onReceived(result);
               }
+            } else {
+              // last expected byte is not 0x68
+              if (_buffer.length > expectedLen) {
+                _buffer = _buffer[expectedLen..$];
+              } else {
+                _buffer = [];
+                processed = true;
+              }
             }
           } else {
             // wait for the next chunk

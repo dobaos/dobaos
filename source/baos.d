@@ -10,6 +10,7 @@ import serialport;
 import ft12;
 import object_server;
 import datapoints;
+import errors;
 
 class Baos {
   private SerialPortNonBlk com;
@@ -27,6 +28,8 @@ class Baos {
   private bool _resetAckReceived = false;
   private bool _ackReceived = true;
   private bool _responseReceived = true;
+
+  private bool _interrupted = false;
 
   private void onFT12Frame(FT12Frame frame) {
     OS_Message[] messagesToEmit = [];
@@ -85,6 +88,8 @@ class Baos {
     return tmp.length;
   }
 
+  public void delegate() processIncomingInterrupts;
+
   public OS_Message processInd() {
     processIncomingData();
     if (_ind.length > 0) {
@@ -109,10 +114,16 @@ class Baos {
 
     return res;
   }
+  public bool processInterrupts() {
+    bool res = _interrupted;
+    _interrupted = false;
+
+    return res;
+  }
 
   private OS_Message commonRequest(ubyte[] message) {
     // reqs are syncronuous, so, no queue is required
-    if (_resetAckReceived && _ackReceived && _responseReceived) {
+    //if (_resetAckReceived && _ackReceived && _responseReceived) {
       _ackReceived = false;
       _responseReceived = false;
       if (currentParity == FT12FrameParity.unknown || currentParity == FT12FrameParity.even) {
@@ -127,14 +138,23 @@ class Baos {
       request.payload = message[0..$];
       ubyte[] buffer = ft12.compose(request);
       com.write(buffer);
-      // пока не получен ответ, либо индикатор сброса
-      while(!(_responseReceived || _resetInd)) {
+      // пока не получен ответ, либо индикатор сброса, либо прерывание
+      while(!(_responseReceived || _resetInd || _interrupted)) {
         try {
           processIncomingData();
+          processIncomingInterrupts();
           if (_resetInd) {
             _response.success = false;
             _response.service = OS_Services.unknown;
-            _response.error = new Exception("unknown error");
+            _response.error = Errors.interrupted;
+
+            _responseReceived = true;
+            _ackReceived = true;
+          }
+          if (_interrupted) {
+            _response.success = false;
+            _response.service = OS_Services.unknown;
+            _response.error = Errors.interrupted;
 
             _responseReceived = true;
             _ackReceived = true;
@@ -146,14 +166,16 @@ class Baos {
       }
 
       return _response;
-    }
+    //}
 
+    /***
     OS_Message result;
     result.success = false;
-    result.error = new Exception("unknown error");
+    result.error = Errors.unknown;
     result.service = OS_Services.unknown;
 
     return result;
+    ***/
   }
   public OS_Message GetDatapointDescriptionReq(ushort start, ushort number = 1) {
     return commonRequest(OS_Protocol.GetDatapointDescriptionReq(start, number));
@@ -171,13 +193,11 @@ class Baos {
     return commonRequest(OS_Protocol.SetServerItemReq(items));
   }
 
-  // constructor
-  this(string device = "/dev/ttyS1", string params = "19200:8E1") {
-    com = new SerialPortNonBlk(device, params);
+  public void interrupt() {
+    _interrupted = true;
+  }
 
-    // register listener for ft12 incoming frames
-    ft12 = new FT12Helper(&onFT12Frame);
-
+  public void reset() {
     // send reset request
     FT12Frame resetFrame;
     resetFrame.type = FT12FrameType.resetReq;
@@ -187,9 +207,20 @@ class Baos {
 
     // init var
     _resetInd = false;
+    _resetAckReceived = false;
     // and wait until it is received
-    while(!_resetAckReceived) {
+    while(!_resetAckReceived ) {
       processIncomingData();
     }
+  }
+
+
+  // constructor
+  this(string device = "/dev/ttyS1", string params = "19200:8E1") {
+    com = new SerialPortNonBlk(device, params);
+
+    // register listener for ft12 incoming frames
+    ft12 = new FT12Helper(&onFT12Frame);
+
   }
 }
