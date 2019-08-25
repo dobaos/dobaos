@@ -15,11 +15,7 @@ To install ldc use script:
 curl -fsS https://dlang.org/install.sh | bash -s ldc
 ```
 
-then
-
-```text
-source ~/dlang/ldc-1.15.0/activate
-```
+then follow on-screen instructions
 
 ```text
 git clone https://github.com/shabunin/dobaos.git
@@ -136,10 +132,11 @@ Possible payload: `true/false/1/0`
 
 ### broadcasts
 
-There is messages broadcasted to `bcast_channel` on incoming datapoint values or when `set value` method was successfully called.
+There is messages broadcasted to `bcast_channel` on incoming datapoint values or when `set value` method was successfully called. Message format is the same as for getValue response.
 
-## TODO
+## Client libraries
 
-1. more datapoint types support.
-2. not all methods compared to bobaos.pub are implemented yet
-3. service reset method
+Currently, only js library exists:
+
+* [dobaos.js](https://github.com/shabunin/dobaos.js)
+
