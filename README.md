@@ -17,6 +17,8 @@ curl -fsS https://dlang.org/install.sh | bash -s ldc
 
 then follow on-screen instructions
 
+after installing and activating ldc environment, clone and compile this repo
+
 ```text
 git clone https://github.com/shabunin/dobaos.git
 cd ./dobaos
