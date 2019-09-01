@@ -17,6 +17,15 @@ import errors;
 
 void main()
 {
+
+  string logo;
+  logo = "\n".dup;
+  logo ~= "  ()-()     hello, friend\n";
+  logo ~= "   \\\"/_     here comes dobaos again\n";
+  logo ~= "    '  )    with the liquor and drugs\n";
+
+  writeln(logo);
+
   StopWatch sw;
   sw.start();
 
