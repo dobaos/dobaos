@@ -8,12 +8,38 @@ import std.functional;
 
 import std.datetime.stopwatch;
 
+import clid;
+import clid.validate;
+
 import baos;
 import datapoints;
 import object_server;
 import dsm;
 import sdk;
 import errors;
+
+private struct Config
+{
+  @Parameter("device", 'd')
+  @Description("UART device. Default: /dev/ttyS1")
+  string device;
+
+  @Parameter("params", 'p')
+  @Description("Serialport parameters. Default: 19200:8E1")
+  string params;
+
+  @Parameter("req_channel", 'r')
+  @Description("Pub/Sub channel for datapoint requests. Default: dobaos_req")
+  string req_channel;
+
+  @Parameter("service_channel", 's')
+  @Description("Pub/sub channel for service requests. Default: dobaos_service")
+  string service_channel;
+
+  @Parameter("bcast_channel", 'b')
+  @Description("Pub/sub channel for broadcasted values. Default: dobaos_cast")
+  string bcast_channel;
+}
 
 void main()
 {
@@ -26,12 +52,22 @@ void main()
 
   writeln(logo);
 
+  // parse args
+  auto config = parseArguments!Config();
+  string device = config.device.length > 1 ? config.device : "/dev/ttyS1";
+  string params = config.params.length > 1 ? config.params : "19200:8E1";
+  string req_channel = config.req_channel.length > 1 ? config.req_channel : "dobaos_req";
+  string service_channel = config.service_channel.length > 1 ? config.service_channel : "dobaos_service";
+  string bcast_channel = config.bcast_channel.length > 1 ? config.bcast_channel : "dobaos_cast";
+  string service_cast = "dobaos_cast";
+
+
   StopWatch sw;
   sw.start();
 
-  auto sdk = new DatapointSdk("/dev/ttyS1", "19200:8E1");
+  auto sdk = new DatapointSdk(device, params);
 
-  auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, "dobaos_req", "dobaos_cast");
+  auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, req_channel, bcast_channel);
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     JSONValue res;
 
@@ -159,7 +195,7 @@ void main()
   dsm.subscribe(toDelegate(&handleRequest));
 
   // service messages
-  auto ssm = new Dsm("127.0.0.1", cast(ushort)6379, "dobaos_service", "dobaos_scast");
+  auto ssm = new Dsm("127.0.0.1", cast(ushort)6379, service_channel, service_cast);
   void handleService(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     JSONValue res;
 

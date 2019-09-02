@@ -2,11 +2,12 @@
 	"authors": [
 		"Vladimir Shabunin"
 	],
-  "dependencies": {
-    "serialport": "~>2.2.0",
-    "tinyredis": "~>2.2.0"
-  },
 	"copyright": "Copyright © 2019, undefeated",
+	"dependencies": {
+		"cli-d": "~>0.1.1",
+		"serialport": "~>2.2.0",
+		"tinyredis": "~>2.2.0"
+	},
 	"description": "A minimal D application.",
 	"license": "proprietary",
 	"name": "dobaos"
