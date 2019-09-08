@@ -45,7 +45,7 @@ On redis message: parse JSON, send request to UART, then respond.
 
 ## Protocol
 
-JSON messages should be sent to request channel.
+JSON messages should be sent to pub/sub channel. Apllication is listening two channels: one for datapoint methods, second - for service methods.
 
 ```text
 {
@@ -70,7 +70,7 @@ Response:
 ```
 
 
-### methods:
+### datapoint methods:
 
 #### get description
 
@@ -131,6 +131,20 @@ Returns `true/false`.
 Set programming mode of BAOS module.
 
 Possible payload: `true/false/1/0`
+
+### service methods:
+
+#### version
+
+Get current program version
+
+Possible payload: any. 
+
+#### reset
+
+Reload sdk.
+
+Possible payload: any.
 
 ### broadcasts
 
