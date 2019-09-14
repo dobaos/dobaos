@@ -12,6 +12,7 @@ import std.range.primitives : empty;
 import std.json;
 import std.base64;
 
+import logo;
 import object_server;
 import datapoints;
 import baos;
@@ -504,7 +505,6 @@ class DatapointSdk {
           }
 
           // what is a range? not in specs.
-          // TODO: study
 
           res.value = DPT14.toUBytes(_val);
           res.length = cast(ubyte)res.value.length;
@@ -1091,6 +1091,29 @@ class DatapointSdk {
     return res;
   }
 
+  public JSONValue getServerItems() {
+    JSONValue res = parseJSON("[]");
+
+    res.array.length = 17;
+    auto serverItemMessage = baos.GetServerItemReq(1, 17);
+    if (!serverItemMessage.success) {
+      throw serverItemMessage.error;
+    }
+
+    auto count = 0;
+    foreach(si; serverItemMessage.server_items) {
+      res.array[count] = parseJSON("{}");
+      res.array[count]["id"] = si.id;
+      res.array[count]["value"] = si.value;
+      res.array[count]["raw"] = Base64.encode(si.value);
+      count += 1;
+    }
+
+    res.array.length = count;
+
+    return res;
+  }
+
   public JSONValue processInd() {
     JSONValue res = parseJSON("null");
     OS_Message ind = baos.processInd();
@@ -1108,6 +1131,7 @@ class DatapointSdk {
         } catch(Exception e) {
           writeln(e);
           if (e == Errors.datapoint_not_found) {
+            print_logo();
             writeln(" ==== Unknown datapoint indication was received ==== ");
             
             bool initialized = false;
@@ -1130,7 +1154,29 @@ class DatapointSdk {
         res = parseJSON("null");
       }
     }
-    // TODO: server ind
+    if (ind.service == OS_Services.ServerItemInd) {
+      res = parseJSON("{}");
+      res["method"] = "server item";
+      res["payload"] = parseJSON("[]");
+      res["payload"].array.length = ind.server_items.length;
+      auto count = 0;
+      foreach(OS_ServerItem si; ind.server_items) {
+        try {
+          res["payload"].array[count] = parseJSON("{}");
+          res["payload"].array[count]["id"] = si.id;
+          res["payload"].array[count]["value"] = si.value;
+          res["payload"].array[count]["raw"] = Base64.encode(si.value);
+          count++;
+        } catch(Exception e) {
+          writeln(e);
+        }
+      }
+      if (count > 0) {
+        res["payload"].array.length = count;
+      } else {
+        res = parseJSON("null");
+      }
+    }
 
     return res;
   }
@@ -1205,6 +1251,7 @@ class DatapointSdk {
   // on incoming reset req. ETS download/bus dis and then -connected
   public void processResetInd() {
     if (baos.processResetInd()) {
+      print_logo();
       writeln(" ==== Reset indication was received ==== ");
       
       bool initialized = false;
@@ -1223,6 +1270,7 @@ class DatapointSdk {
 
   public void processInterrupts() {
     if (baos.processInterrupts()) {
+      print_logo();
       writeln(" ==== Reset request was received ==== ");
       bool initialized = false;
       while(!initialized) {

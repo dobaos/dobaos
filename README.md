@@ -132,6 +132,12 @@ Set programming mode of BAOS module.
 
 Possible payload: `true/false/1/0`
 
+#### get server items
+
+Get all(1-17) server items of BAOS module/
+
+Possible payload: any. Doesn't matter for this request.
+
 ### service methods:
 
 #### version
@@ -149,6 +155,8 @@ Possible payload: any.
 ### broadcasts
 
 There is messages broadcasted to `bcast_channel` on incoming datapoint values or when `set value` method was successfully called. Message format is the same as for getValue response.
+
+Also, on server item change(e.g. programming mode button or bus connect/disconnect), message with `server item` as a method is broadcasted.
 
 ## Client libraries
 

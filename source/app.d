@@ -11,6 +11,7 @@ import std.datetime.stopwatch;
 import clid;
 import clid.validate;
 
+import logo;
 import baos;
 import datapoints;
 import object_server;
@@ -18,6 +19,7 @@ import dsm;
 import sdk;
 import errors;
 
+// struct for commandline params
 private struct Config
 {
   @Parameter("device", 'd')
@@ -43,14 +45,7 @@ private struct Config
 
 void main()
 {
-
-  string logo;
-  logo = "\n".dup;
-  logo ~= "  ()-()     hello, friend\n";
-  logo ~= "   \\\"/_     here comes dobaos again\n";
-  logo ~= "    '  )    with the liquor and drugs\n";
-
-  writeln(logo);
+  print_logo();
 
   // parse args
   auto config = parseArguments!Config();
@@ -60,7 +55,6 @@ void main()
   string service_channel = config.service_channel.length > 1 ? config.service_channel : "dobaos_service";
   string bcast_channel = config.bcast_channel.length > 1 ? config.bcast_channel : "dobaos_cast";
   string service_cast = "dobaos_cast";
-
 
   StopWatch sw;
   sw.start();
@@ -178,6 +172,17 @@ void main()
         try {
           res["method"] = "success";
           res["payload"] = sdk.setProgrammingMode(jreq["payload"]);
+          sendResponse(res);
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
+      case "get server items":
+        try {
+          res["method"] = "success";
+          res["payload"] = sdk.getServerItems();
           sendResponse(res);
         } catch(Exception e) {
           res["method"] = "error";
