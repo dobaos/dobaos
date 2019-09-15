@@ -105,7 +105,7 @@ Possible payload:
   * `Array` of `Object` - for multiple datapoints
 
 Datapoint value is automatically converted to configured in ETS dpt.
-Keep in mind that not all datapoints supported right now and there is a long way to add support.
+To get information about value formats, please study `source/datapoints.d`. Documentation will be available soon.
 
 #### read value
 
@@ -134,7 +134,7 @@ Possible payload: `true/false/1/0`
 
 #### get server items
 
-Get all(1-17) server items of BAOS module/
+Get all(1-17) server items of BAOS module.
 
 Possible payload: any. Doesn't matter for this request.
 
