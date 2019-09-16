@@ -14,6 +14,7 @@ enum Errors {
   wrong_value_type = new Exception("ERR_WRONG_VALUE_TYPE"),
   dpt_not_supported = new Exception("ERR_DPT_NOT_SUPPORTED"),
   wrong_value = new Exception("ERR_WRONG_VALUE"),
+  wrong_raw_value = new Exception("ERR_WRONG_RAW_VALUE"),
   baos_unknown = new Exception("ERR_BAOS_UNKNOWN"),
   baos_no_error = new Exception("ERR_BAOS_NO_ERROR"),
   baos_internal = new Exception("ERR_BAOS_INTERNAL"),

@@ -131,7 +131,11 @@ class DatapointSdk {
     auto dpt = descriptions[id].type;
     // raw value encoded in base64
     if (hasRaw) {
-      res.value = Base64.decode(value["raw"].str);
+      try {
+        res.value = Base64.decode(value["raw"].str);
+      } catch(Exception e) {
+        throw Errors.wrong_raw_value;
+      }
       res.length = cast(ubyte)res.value.length;
     } else {
 
