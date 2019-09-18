@@ -275,7 +275,12 @@ void main()
     dsm.processMessages();
     ssm.processMessages();
 
-    // TODO: calculate approximate sleep time depending on baudrate
+    // calculate approximate sleep time depending on baudrate.
+    // assuming default baud 19200 bits per second is used.
+    // also that on each iteration app needs to get at least 4 bytes.
+    // bytes_per_second = 19200/8 = 2400; bytes_per_ms = 2,4;
+    // 4bytes can be received in 4/2.4 = 1.6 ~= 2 ms;
+    // same applies to baos.d
     Thread.sleep(2.msecs);
   }
 }

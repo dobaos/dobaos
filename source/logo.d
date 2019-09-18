@@ -6,7 +6,7 @@ import std.random;
 string[] logo;
 
 shared static this() {
-  logo.length = 6;
+  logo.length = 8;
   logo[0] = "\n".dup;
   logo[0] ~= "  ()-()     hello, friend\n";
   logo[0] ~= "   \\\"/_     here comes dobaos again\n";
@@ -36,6 +36,16 @@ shared static this() {
   logo[5] ~= "  ()-()     I was a dam builder\n";
   logo[5] ~= "   \\\"/_     across the river deep and wide\n";
   logo[5] ~= "    '  )    where still and water did collide\n";
+
+  logo[6] = "\n".dup;
+  logo[6] ~= "  ()-()     hello, friend\n";
+  logo[6] ~= "   \\\"/_     So I take a little bad with the good\n";
+  logo[6] ~= "    '  )    It ain't just black and white\n";
+
+  logo[7] = "\n".dup;
+  logo[7] ~= "  ()-()     hello, friend\n";
+  logo[7] ~= "   \\\"/_     There something wrong with me chemically\n";
+  logo[7] ~= "    '  )    Something wrong with me inherently\n";
 }
 
 void print_logo() {
