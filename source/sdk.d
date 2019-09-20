@@ -158,9 +158,11 @@ class DatapointSdk {
       auto _value = value["value"];
       switch(dpt) {
         case OS_DatapointType.dpt1:
-          bool _val = true;
+          bool _val;
           if (_value.type() == JSONType.false_) {
             _val = false;
+          } else if (_value.type() == JSONType.true_) {
+            _val = true;
           } else if (_value.type() == JSONType.integer) {
             _val = _value.integer != 0;
           } else if (_value.type() == JSONType.uinteger) {
