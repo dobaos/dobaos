@@ -188,22 +188,26 @@ class DatapointSdk {
             }
             if (_value["control"].type() == JSONType.false_) {
               _ctrl = false;
-            } else if (_value["control"].type == JSONType.integer) {
+            } else if (_value["control"].type() == JSONType.true_) {
+              _ctrl = true;
+            } else if (_value["control"].type() == JSONType.integer) {
               _ctrl = _value["control"].integer != 0;
-            } else if (_value["control"].type == JSONType.uinteger) {
+            } else if (_value["control"].type() == JSONType.uinteger) {
               _ctrl = _value["control"].uinteger != 0;
-            } else if (_value["control"].type == JSONType.float_) {
+            } else if (_value["control"].type() == JSONType.float_) {
               _ctrl = _value["control"].floating != 0;
             } else {
               throw Errors.wrong_value;
             }
             if (_value["value"].type() == JSONType.false_) {
               _val = false;
-            } else if (_value["value"].type == JSONType.integer) {
+            } else if (_value["value"].type() == JSONType.true_) {
+              _val = true;
+            } else if (_value["value"].type() == JSONType.integer) {
               _val = _value["value"].integer != 0;
-            } else if (_value["value"].type == JSONType.uinteger) {
+            } else if (_value["value"].type() == JSONType.uinteger) {
               _val = _value["value"].uinteger != 0;
-            } else if (_value["value"].type == JSONType.float_) {
+            } else if (_value["value"].type() == JSONType.float_) {
               _val = _value["value"].floating != 0;
             } else {
               throw Errors.wrong_value;
@@ -228,18 +232,18 @@ class DatapointSdk {
             if (_fieldsInvalid) {
               throw Errors.wrong_value;
             }
-            if (_value["direction"].type == JSONType.integer) {
+            if (_value["direction"].type() == JSONType.integer) {
               _dir = (_value["direction"].integer != 0) ? 1: 0;
-            } else if (_value["direction"].type == JSONType.uinteger) {
+            } else if (_value["direction"].type() == JSONType.uinteger) {
               _dir = (_value["direction"].uinteger != 0)? 1: 0;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (_value["step"].type == JSONType.integer) {
+            if (_value["step"].type() == JSONType.integer) {
               assertLongBounds(_value.integer, 0, 7);
               _step = cast(ubyte) _value["step"].integer;
-            } else if (_value["step"].type == JSONType.uinteger) {
+            } else if (_value["step"].type() == JSONType.uinteger) {
               assertULongBounds(_value.uinteger, 0, 7);
               _step = cast(ubyte) _value["step"].uinteger;
             } else {
@@ -364,40 +368,40 @@ class DatapointSdk {
             if (_fieldsInvalid) {
               throw Errors.wrong_value;
             }
-            if (_value["day"].type == JSONType.integer) {
+            if (_value["day"].type() == JSONType.integer) {
               assertLongBounds(_value["day"].integer, 0, 7);
               _day = cast(ubyte) _value["day"].integer;
-            } else if (_value["day"].type == JSONType.uinteger) {
+            } else if (_value["day"].type() == JSONType.uinteger) {
               assertLongBounds(_value["day"].uinteger, 0, 7);
               _day = cast(ubyte) _value["day"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (_value["hour"].type == JSONType.integer) {
+            if (_value["hour"].type() == JSONType.integer) {
               assertLongBounds(_value["hour"].integer, 0, 23);
               _hour = cast(ubyte) _value["hour"].integer;
-            } else if (_value["hour"].type == JSONType.uinteger) {
+            } else if (_value["hour"].type() == JSONType.uinteger) {
               assertULongBounds(_value["hour"].uinteger, 0, 23);
               _hour = cast(ubyte) _value["hour"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (_value["minutes"].type == JSONType.integer) {
+            if (_value["minutes"].type() == JSONType.integer) {
               assertLongBounds(_value["minutes"].integer, 0, 59);
               _minutes = cast(ubyte) _value["minutes"].integer;
-            } else if (_value["minutes"].type == JSONType.uinteger) {
+            } else if (_value["minutes"].type() == JSONType.uinteger) {
               assertULongBounds(_value["minutes"].uinteger, 0, 59);
               _minutes = cast(ubyte) _value["minutes"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (_value["seconds"].type == JSONType.integer) {
+            if (_value["seconds"].type() == JSONType.integer) {
               assertLongBounds(_value["seconds"].integer, 0, 59);
               _seconds = cast(ubyte) _value["seconds"].integer;
-            } else if (_value["seconds"].type == JSONType.uinteger) {
+            } else if (_value["seconds"].type() == JSONType.uinteger) {
               assertULongBounds(_value["seconds"].uinteger, 0, 59);
               _seconds = cast(ubyte) _value["seconds"].uinteger;
             } else {
@@ -428,30 +432,30 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
 
-            if (_value["day"].type == JSONType.integer) {
+            if (_value["day"].type() == JSONType.integer) {
               assertLongBounds(_value["day"].integer, 1, 31);
               _day = cast(ushort) _value["day"].integer;
-            } else if (_value["day"].type == JSONType.uinteger) {
+            } else if (_value["day"].type() == JSONType.uinteger) {
               assertULongBounds(_value["day"].uinteger, 1, 31);
               _day = cast(ushort) _value["day"].uinteger != 0;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (_value["month"].type == JSONType.integer) {
+            if (_value["month"].type() == JSONType.integer) {
               assertLongBounds(_value["month"].integer, 1, 12);
               _month = cast(ushort) _value["month"].integer;
-            } else if (_value["month"].type == JSONType.uinteger) {
+            } else if (_value["month"].type() == JSONType.uinteger) {
               assertULongBounds(_value["month"].uinteger, 1, 12);
               _month = cast(ushort) _value["month"].uinteger;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (_value["year"].type == JSONType.integer) {
+            if (_value["year"].type() == JSONType.integer) {
               assertLongBounds(_value["year"].integer, 1990, 2089);
               _year = cast(ushort) _value["year"].integer;
-            } else if (_value["year"].type == JSONType.uinteger) {
+            } else if (_value["year"].type() == JSONType.uinteger) {
               assertULongBounds(_value["year"].uinteger, 1990, 2089);
               _year = cast(ushort) _value["year"].uinteger;
             } else {
@@ -538,19 +542,21 @@ class DatapointSdk {
               throw Errors.wrong_value;
             }
 
-            if (_value["learn"].type == JSONType.false_) {
+            if (_value["learn"].type() == JSONType.false_) {
               _learn = 0;
-            } else if (_value["learn"].type == JSONType.integer) {
+            } else if (_value["learn"].type() == JSONType.true_) {
+              _learn = 1;
+            } else if (_value["learn"].type() == JSONType.integer) {
               _learn = (_value["learn"].integer != 0)? 1: 0;
-            } else if (_value["learn"].type == JSONType.uinteger) {
+            } else if (_value["learn"].type() == JSONType.uinteger) {
               _learn = (_value["learn"].uinteger != 0)? 1: 0;
             } else {
               throw Errors.wrong_value;
             }
 
-            if (_value["number"].type == JSONType.integer) {
+            if (_value["number"].type() == JSONType.integer) {
               _num = cast(ubyte) _value["step"].integer;
-            } else if (_value["number"].type == JSONType.uinteger) {
+            } else if (_value["number"].type() == JSONType.uinteger) {
               _num = cast(ubyte) _value["number"].uinteger;
             } else {
               throw Errors.wrong_value;
