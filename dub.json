@@ -6,7 +6,7 @@
 	"dependencies": {
 		"cli-d": "~>0.1.1",
 		"serialport": "~>2.2.0",
-		"tinyredis": "~>2.2.0"
+		"tinyredis": "~>2.2.1"
 	},
 	"description": "A minimal D application.",
 	"license": "proprietary",

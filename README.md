@@ -25,7 +25,9 @@ cd ./dobaos
 dub
 ```
 
-if everything is ok, process will start
+if everything is ok, process will start.
+
+If you can't compile source by yourself(ldc2 can't be installed on Raspberry Pi3, so cross-compi;ation tool should be used), compiled versions for NanoPi Neo Core2 and Raspberry Pi 3 can be found on [google drive](https://drive.google.com/drive/folders/1LxJj-hWxdFW1As1zJIehzDWGsSe2RmR9?usp=sharing):
 
 ## General info
 
@@ -164,3 +166,7 @@ Currently, only js library exists:
 
 * [dobaos.js](https://github.com/shabunin/dobaos.js)
 
+
+## Tools
+
+* [dobaos.tool](https://github.com/shabunin/dobaos.tool)
