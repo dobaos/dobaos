@@ -149,8 +149,8 @@ Response:
 | method | payload | Description |
 | :--- | :--- | :--- |
 | get description | `null`/`Number`/`Array` | Get description for all/one/multiple datapoints. Use `null` payload to get all descriptions. |
-| get value | `null`/`Number`/`Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. |
-| set value | `{id: xx, value: xx}`/`Array` | Set value for one/multiple datapoints. |
+| get value | `null`/`Number`/`Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
+| set value | `{id: xx, value: xx}`/`{id: xx, raw: xx}`/`Array` | Set value for one/multiple datapoints. A `raw` field should be base64 encoded binary data. |
 | read value | `null`/`Number`/`Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
 | get programming mode | any | Returns `true` or `false` depending on programming mode state. |
 | set programming mode | `0/1/false/true` | Push device into programming mode. |
@@ -172,9 +172,24 @@ Also, on server item change(e.g. programming mode button or bus connect/disconne
 
 ## Datapoint value formats
 
-| DPT | raw2json | json2raw |
+| DPT | getValue returns JSON value| setValue accepts JSON value|
 | :--- | :--- | :--- |
 | DPT1 | `true/false` | `0/1/false/true` |
+| DPT2 | `{ control: false/true, value: false/true }`| `{ control: 0/1/false/true, value: 0/1/false/true }` |
+| DPT3 | `{ direction: 0/1, step: number in range 0..7 }` | `{ direction: 0/1, step: number in range 0..7 }` |
+| DPT4 | ASCII char | ASCII char |
+| DPT5 | int in range `0..255` | int in range `0..255` |
+| DPT6 | int in range `-127..127` | int in range `-127..127` |
+| DPT7 | int in range `0..65535` | int in range `0..65535` |
+| DPT8 | int in range `-32768..32768` | int in range `-32768..32768` |
+| DPT9 | float in range `-671088.65..650761.97` | float in range `-671088.65..650761.97` |
+| DPT10 | `{ day: int, hour: int, minutes: int, seconds: int }` | `{ day: int, hour: int, minutes: int, seconds: int }` |
+| DPT11 | `{ day: int, month: int, year: int }` | `{ day: int, month: int, year: int }` |
+| DPT12 | int in range `0..4294967295` | int in range `0..4294967295` |
+| DPT13 | int in range `-2147483648..2147483647` | int in range `-2147483648..2147483647` |
+| DPT14 | float | float |
+| DPT16 | string 14 symbols long | string |
+| DPT18 | `{ learn : 0/1, number: int }` | `{ learn : 0/1/false/true, number: int }` |
 
 ## Client libraries
 
