@@ -144,93 +144,37 @@ Response:
 ```
 
 
-### datapoint methods:
+### Datapoint methods:
 
-#### get description
+| method | payload | Description |
+| :--- | :--- | :--- |
+| get description | `null`/`Number`/`Array` | Get description for all/one/multiple datapoints. Use `null` payload to get all descriptions. |
+| get value | `null`/`Number`/`Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. |
+| set value | `{id: xx, value: xx}`/`Array` | Set value for one/multiple datapoints. |
+| read value | `null`/`Number`/`Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
+| get programming mode | any | Returns `true` or `false` depending on programming mode state. |
+| set programming mode | `0/1/false/true` | Push device into programming mode. |
+| get server items | any | Get server items 1-17. |
 
-Get description for selected datapoints.
-Possible payload: 
-  * `null` - for all datapoints,
-  * `Number` - for one datapoint in range 1-1000
-  * `Array` of `Number` - for multiple datapoints
 
-#### get value
+### Service methods:
 
-Get value for selected datapoints.
+| method | payload | Description |
+| :--- | :--- | :--- |
+| version | any | Get current service version. |
+| reset | any | Restart sdk: interrupt current request, reload datapoints. |
 
-Possible payload:
-
-  * `null` - for all datapoints,
-  * `Number` - for one datapoint in range 1-1000
-  * `Array` of `Number` - for multiple datapoints
-
-#### set value
-
-Set value for selected datapoints.
-
-Possible payload:
-
-  * `Object` - for one datapoint in range 1-1000
-  
-  `{ id: Number, value: <Value> }` or
-
-  `{ id: Number, raw: String }`
-
-  * `Array` of `Object` - for multiple datapoints
-
-Datapoint value is automatically converted to configured in ETS dpt.
-To get information about value formats, please study `source/datapoints.d`. Documentation will be available soon.
-
-#### read value
-
-Send read value request for selected datapoints.
-
-Possible payload: 
-  * `null` - for all datapoints,
-  * `Number` - for one datapoint in range 1-1000
-  * `Array` of `Number` - for multiple datapoints
-
-Keep in mind that datapoint should have UPDATE flag.
-
-#### get programming mode
-
-Get information if BAOS module in programming mode.
-
-Request payload: `null`.
-
-Returns `true/false`.
-
-#### set programming mode
-
-Set programming mode of BAOS module.
-
-Possible payload: `true/false/1/0`
-
-#### get server items
-
-Get all(1-17) server items of BAOS module.
-
-Possible payload: any. Doesn't matter for this request.
-
-### service methods:
-
-#### version
-
-Get current program version
-
-Possible payload: any. 
-
-#### reset
-
-Reload sdk.
-
-Possible payload: any.
-
-### broadcasts
+### Broadcasts
 
 There is messages broadcasted to `bcast_channel` on incoming datapoint values or when `set value` method was successfully called. Message format is the same as for getValue response.
 
 Also, on server item change(e.g. programming mode button or bus connect/disconnect), message with `server item` as a method is broadcasted.
+
+## Datapoint value formats
+
+| DPT | raw2json | json2raw |
+| :--- | :--- | :--- |
+| DPT1 | `true/false` | `0/1/false/true` |
 
 ## Client libraries
 
@@ -240,4 +184,4 @@ Also, on server item change(e.g. programming mode button or bus connect/disconne
 
 ## Tools
 
-* [dobaos.tool](https://github.com/shabunin/dobaos.tool)
+* [dobaos.tool](https://github.com/dobaos/dobaos.tool)
