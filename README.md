@@ -9,8 +9,13 @@ sudo apt install redis-server
 ```
 
 * UART enabled
-* Weinzierl BAOS 83x module connected to UART.
-* nodejs - optional.
+* Weinzierl KNX BAOS 83x module connected to UART.
+* nodejs - for dobaos.tool.
+
+```text
+curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
 
 ## Compiling and running
 
@@ -34,9 +39,9 @@ dub
 
 if everything is ok, process will start. Stop it and proceed next.
 
-If you can't compile source by yourself(ldc2 can't be installed on Raspberry Pi3, so cross-compi;ation tool should be used), compiled versions for NanoPi Neo Core2 and Raspberry Pi 3 can be found on [google drive](https://drive.google.com/drive/folders/1LxJj-hWxdFW1As1zJIehzDWGsSe2RmR9?usp=sharing).If you need compiled binary for another platform, contact me.
+If you can't compile source by yourself(ldc2 can't be installed on Raspberry Pi3, so cross-compilation tool should be used), compiled versions for NanoPi Neo Core2 and Raspberry Pi 3 can be found on [google drive](https://drive.google.com/drive/folders/1LxJj-hWxdFW1As1zJIehzDWGsSe2RmR9?usp=sharing).
 
-If you downloaded binary from google drive, then put it to user home folder on your single board computer. If you are working on linux/macOS do it with help of scp or sshfs(which I recommend as a convenient way to work with remote filesystem). After you copied file to home folder, do ssh login and put this file to `/usr/local/bin/dobaos`.
+If you downloaded binary from google drive, then put it to user home folder on your single board computer. If you are working on linux/macOS do it with help of scp or sshfs(which I recommend as a convenient way to work with remote filesystem). For Windows take a look at [billziss-gh/sshfs-win](https://github.com/billziss-gh/sshfs-win). After you copied file to home folder, do ssh login and put this file to `/usr/local/bin/dobaos`.
 
 Assuming binary name in user home folder is `dobaos`. Give it permission to run at first, and copy to global bin directory:
 
@@ -88,8 +93,6 @@ sudo systemctl start dobaos.service
 Check service state with `dobaos.tool`. To install it, run
 
 ```text
-curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
-sudo apt-get install -y nodejs
 sudo npm i -g dobaos.tool
 ```
 
@@ -148,12 +151,12 @@ Response:
 
 | method | payload | Description |
 | :--- | :--- | :--- |
-| get description | `null`/`Number`/`Array` | Get description for all/one/multiple datapoints. Use `null` payload to get all descriptions. |
-| get value | `null`/`Number`/`Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
-| set value | `{id: xx, value: xx}`/`{id: xx, raw: xx}`/`Array` | Set value for one/multiple datapoints. A `raw` field should be base64 encoded binary data. |
-| read value | `null`/`Number`/`Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
+| get description | `null/int/Array` | Get description for all/one/multiple datapoints. Use `null` payload to get all descriptions. |
+| get value | `null/int/Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
+| set value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints. A `raw` field should be base64 encoded binary data. |
+| read value | `null/int/Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
 | get programming mode | any | Returns `true` or `false` depending on programming mode state. |
-| set programming mode | `0/1/false/true` | Push device into programming mode. |
+| set programming mode | `0/1/false/true` | Set device programming mode value. As if you pressed physical button. |
 | get server items | any | Get server items 1-17. |
 
 
@@ -176,7 +179,7 @@ Also, on server item change(e.g. programming mode button or bus connect/disconne
 | :--- | :--- | :--- |
 | DPT1 | `true/false` | `0/1/false/true` |
 | DPT2 | `{ control: false/true, value: false/true }`| `{ control: 0/1/false/true, value: 0/1/false/true }` |
-| DPT3 | `{ direction: 0/1, step: number in range 0..7 }` | `{ direction: 0/1, step: number in range 0..7 }` |
+| DPT3 | `{ direction: 0/1, step: int in range 0..7 }` | `{ direction: 0/1, step: int in range 0..7 }` |
 | DPT4 | ASCII char | ASCII char |
 | DPT5 | int in range `0..255` | int in range `0..255` |
 | DPT6 | int in range `-127..127` | int in range `-127..127` |
