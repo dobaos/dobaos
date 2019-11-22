@@ -638,6 +638,12 @@ class DatapointSdk {
     JSONValue res = parseJSON("{}");
     if (payload.type() == JSONType.integer) {
       ushort id = cast(ushort) payload.integer;
+      if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+        throw Errors.datapoint_out_of_bounds;
+      }
+      if((id in descriptions) == null) {
+        throw Errors.datapoint_not_found;
+      }
       auto val = baos.GetDatapointValueReq(id);
       if (val.service == OS_Services.GetDatapointValueRes && val.success) {
         //assert(val.datapoint_values.length == 1);
