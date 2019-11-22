@@ -209,11 +209,12 @@ class Baos {
     _resetInd = false;
     _resetAckReceived = false;
     // and wait until it is received
-    while(!_resetAckReceived ) {
+    while(!(_resetAckReceived || _interrupted || _resetInd)) {
       processIncomingData();
+      processIncomingInterrupts();
+      Thread.sleep(2.msecs);
     }
   }
-
 
   // constructor
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {
