@@ -61,8 +61,8 @@ Systemd daemon manages running application at system startup.
 Create and edit `dobaos.service`:
 
 ```text
-touch /etc/systemd/system/dobaos.service 
-nano /etc/systemd/system/dobaos.service 
+sudo touch /etc/systemd/system/dobaos.service 
+sudo nano /etc/systemd/system/dobaos.service 
 ```
 
 and paste following:
