@@ -897,7 +897,7 @@ class DatapointSdk {
       while (currentIndex < rawValues.length) {
         expectedLen += 4;
         expectedLen += rawValues[currentIndex].length;
-        if (expectedLen > maxResLen) {
+        if (expectedLen > maxResLen - 1) {
           // send req if len is exeeded
           // clear len values
           _setValues();
@@ -1032,7 +1032,7 @@ class DatapointSdk {
       while (currentIndex < rawValues.length) {
         expectedLen += 4;
         expectedLen += rawValues[currentIndex].length;
-        if (expectedLen > maxResLen) {
+        if (expectedLen > maxResLen - 1) {
           // send req if len is exeeded
           // clear len values
           _readValues();

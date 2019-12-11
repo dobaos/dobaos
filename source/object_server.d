@@ -226,7 +226,7 @@ class OS_Protocol {
           _result.length = 10;
           break;
         case 14:
-          _result.length = 16;
+          _result.length = 14;
           break;
         default:
           break;
