@@ -236,7 +236,7 @@ void main()
       case "version":
         try {
           res["method"] = "success";
-          res["payload"] = "0.4.2";
+          res["payload"] = "11_dec_2019";
           sendResponse(res);
         } catch(Exception e) {
           res["method"] = "error";
