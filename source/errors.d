@@ -3,6 +3,7 @@ module errors;
 enum Errors {
   unknown = new Exception("ERR_UNKNOWN"),
   interrupted = new Exception("ERR_INTERRUPTED"),
+  timeout = new Exception("ERR_TIMEOUT"),
   no_method_field = new Exception("ERR_NO_METHOD_FIELD"),
   no_payload_field = new Exception("ERR_NO_PAYLOAD_FIELD"),
   unknown_method = new Exception("ERR_UNKNOWN_METHOD"),

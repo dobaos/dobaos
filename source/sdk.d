@@ -725,6 +725,9 @@ class DatapointSdk {
       // get values with current params
       void _getValues() {
         auto val = baos.GetDatapointValueReq(start, number);
+        if (!val.success) {
+          throw val.error;
+        }
         foreach(_val; val.datapoint_values) {
           if ((_val.id in descriptions) != null) {
             res.array[resCount] = convert2JSONValue(_val);
@@ -882,14 +885,15 @@ class DatapointSdk {
             resCount += 1;
           }
         } else {
-          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
-            auto _res = parseJSON("{}");
-            _res["id"] = rawValues[i].id;
-            _res["success"] = false;
-            _res["error"] = setValResult.error.message;
-            res.array[resCount] = _res;
-            resCount += 1;
-          }
+//          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
+//            auto _res = parseJSON("{}");
+//            _res["id"] = rawValues[i].id;
+//            _res["success"] = false;
+//            _res["error"] = setValResult.error.message;
+//            res.array[resCount] = _res;
+//            resCount += 1;
+//          }
+          throw setValResult.error;
         }
       }
 
@@ -1017,14 +1021,15 @@ class DatapointSdk {
             resCount += 1;
           }
         } else {
-          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
-            auto _res = parseJSON("{}");
-            _res["id"] = rawValues[i].id;
-            _res["success"] = false;
-            _res["error"] = setValResult.error.message;
-            res.array[resCount] = _res;
-            resCount += 1;
-          }
+//          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
+//            auto _res = parseJSON("{}");
+//            _res["id"] = rawValues[i].id;
+//            _res["success"] = false;
+//            _res["error"] = setValResult.error.message;
+//            res.array[resCount] = _res;
+//            resCount += 1;
+//          }
+          throw setValResult.error;
         }
       }
 
@@ -1207,7 +1212,7 @@ class DatapointSdk {
     // maximum buffer size
     SI_currentBufferSize = 0;
     writeln("Loading server items");
-    if (serverItemMessage.service == OS_Services.GetServerItemRes) {
+    if (serverItemMessage.service == OS_Services.GetServerItemRes && serverItemMessage.success) {
       foreach(OS_ServerItem si; serverItemMessage.server_items) {
         // maximum buffer size
         if (si.id == 14) {

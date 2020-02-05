@@ -19,6 +19,8 @@ import dsm;
 import sdk;
 import errors;
 
+enum VERSION = "06_feb_2020";
+
 // struct for commandline params
 private struct Config
 {
@@ -236,7 +238,7 @@ void main()
       case "version":
         try {
           res["method"] = "success";
-          res["payload"] = "11_dec_2019";
+          res["payload"] = VERSION;
           sendResponse(res);
         } catch(Exception e) {
           res["method"] = "error";

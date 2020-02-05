@@ -31,6 +31,11 @@ class Baos {
 
   private bool _interrupted = false;
 
+  // timeout
+  private int req_timeout;
+  private bool _timeout = false;
+  private StopWatch sw;
+
   private void onFT12Frame(FT12Frame frame) {
     OS_Message[] messagesToEmit = [];
     bool isAck = frame.isAckFrame();
@@ -87,6 +92,10 @@ class Baos {
 
     return tmp.length;
   }
+  public void processResponseTimeout() {
+    auto dur = sw.peek();
+    _timeout = dur > msecs(req_timeout);
+  }
 
   public void delegate() processIncomingInterrupts;
 
@@ -138,11 +147,14 @@ class Baos {
       request.payload = message[0..$];
       ubyte[] buffer = ft12.compose(request);
       com.write(buffer);
+      sw.reset();
+      sw.start();
       // пока не получен ответ, либо индикатор сброса, либо прерывание
-      while(!(_responseReceived || _resetInd || _interrupted)) {
+      while(!(_responseReceived || _resetInd || _interrupted || _timeout)) {
         try {
           processIncomingData();
           processIncomingInterrupts();
+          processResponseTimeout();
           if (_resetInd) {
             _response.success = false;
             _response.service = OS_Services.unknown;
@@ -158,6 +170,17 @@ class Baos {
 
             _responseReceived = true;
             _ackReceived = true;
+          }
+          if (_timeout) {
+            _response.success = false;
+            _response.service = OS_Services.unknown;
+            _response.error = Errors.timeout;
+
+            _responseReceived = true;
+            _ackReceived = true;
+
+            _timeout = false;
+            sw.reset();
           }
         } catch(Exception e) {
           writeln(e);
@@ -209,19 +232,28 @@ class Baos {
     _resetInd = false;
     _resetAckReceived = false;
     // and wait until it is received
-    while(!(_resetAckReceived || _interrupted || _resetInd)) {
+    while(!(_resetAckReceived || _interrupted || _resetInd || _timeout)) {
       processIncomingData();
       processIncomingInterrupts();
+      processResponseTimeout();
+      if (_timeout) {
+        writeln("ERR_TIMEOUT");
+        _timeout = false;
+        sw.reset();
+        sw.start();
+        // repeat
+        reset();
+      }
       Thread.sleep(2.msecs);
     }
   }
 
   // constructor
-  this(string device = "/dev/ttyS1", string params = "19200:8E1") {
+  this(string device = "/dev/ttyS1", string params = "19200:8E1", int req_timeout = 300) {
     com = new SerialPortNonBlk(device, params);
-
+    this.req_timeout = req_timeout;
+    this.sw = StopWatch(AutoStart.no);
     // register listener for ft12 incoming frames
     ft12 = new FT12Helper(&onFT12Frame);
-
   }
 }
