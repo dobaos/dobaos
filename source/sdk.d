@@ -790,7 +790,8 @@ class DatapointSdk {
     return res;
   }
 
-  public JSONValue setValue(JSONValue payload) {
+  public JSONValue setValue(JSONValue payload,
+      OS_DatapointValueCommand command = OS_DatapointValueCommand.set_and_send) {
     JSONValue res;
     if (payload.type() == JSONType.object) {
       if(("id" in payload) == null) {
@@ -808,7 +809,7 @@ class DatapointSdk {
       }
       res = parseJSON("{}");
       auto rawValue = convert2OSValue(payload);
-      rawValue.command = OS_DatapointValueCommand.set_and_send;
+      rawValue.command = command;
       auto setValResult = baos.SetDatapointValueReq([rawValue]);
       // for each datapoint add item to response
       if (setValResult.success) {
@@ -846,7 +847,7 @@ class DatapointSdk {
           throw Errors.datapoint_not_found;
         }
         auto rawValue = convert2OSValue(value);
-        rawValue.command = OS_DatapointValueCommand.set_and_send;
+        rawValue.command = command;
         rawValues[count] = rawValue;
         count += 1;
       }

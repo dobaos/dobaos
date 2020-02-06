@@ -109,7 +109,49 @@ void main()
       case "set value":
         try {
           res["method"] = "success";
-          res["payload"] = sdk.setValue(jreq["payload"]);
+          res["payload"] = sdk.setValue(jreq["payload"], OS_DatapointValueCommand.set_and_send);
+          sendResponse(res);
+          // broadcast values
+          auto jcast = parseJSON("{}");
+          jcast["method"] = "datapoint value";
+          if (res["payload"].type() == JSONType.array) {
+            jcast["payload"] = parseJSON("[]");
+            jcast["payload"].array.length = res["payload"].array.length;
+            auto count = 0;
+            foreach(value; res["payload"].array) {
+              if (value["success"].type() == JSONType.true_) {
+                auto _jvalue = parseJSON("{}");
+                _jvalue["id"] = value["id"];
+                _jvalue["raw"] = value["raw"];
+                _jvalue["value"] = value["value"];
+                jcast["payload"].array[count] = _jvalue;
+                count += 1;
+              }
+            }
+            if (count > 0) {
+              dsm.broadcast(jcast);
+            }
+          } else if (res["payload"].type() == JSONType.object) {
+            auto value = res["payload"];
+            if (value["success"].type() == JSONType.true_) {
+              auto _jvalue = parseJSON("{}");
+              _jvalue["id"] = value["id"];
+              _jvalue["raw"] = value["raw"];
+              _jvalue["value"] = value["value"];
+              jcast["payload"] = _jvalue;
+              dsm.broadcast(jcast);
+            }
+          }
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
+      case "put value":
+        try {
+          res["method"] = "success";
+          res["payload"] = sdk.setValue(jreq["payload"], OS_DatapointValueCommand.set);
           sendResponse(res);
           // broadcast values
           auto jcast = parseJSON("{}");

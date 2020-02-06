@@ -153,7 +153,8 @@ Response:
 | :--- | :--- | :--- |
 | get description | `null/int/Array` | Get description for all/one/multiple datapoints. Use `null` payload to get all descriptions. |
 | get value | `null/int/Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
-| set value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints. A `raw` field should be base64 encoded binary data. |
+| set value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints. Sends to bus. A `raw` field should be base64 encoded binary data. |
+| put value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints without sending to bus. Store only in BAOS module. A `raw` field should be base64 encoded binary data. |
 | read value | `null/int/Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
 | get programming mode | any | Returns `true` or `false` depending on programming mode state. |
 | set programming mode | `0/1/false/true` | Set device programming mode value. As if you pressed physical button. |
@@ -169,7 +170,7 @@ Response:
 
 ### Broadcasts
 
-There is messages broadcasted to `bcast_channel` on incoming datapoint values or when `set value` method was successfully called. Message format is the same as for getValue response.
+There is messages broadcasted to `bcast_channel` on incoming datapoint values or when `set/put value` method was successfully called. Message format is the same as for getValue response.
 
 Also, on server item change(e.g. programming mode button or bus connect/disconnect), message with `server item` as a method is broadcasted.
 
