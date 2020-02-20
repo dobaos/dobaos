@@ -247,6 +247,11 @@ class Baos {
       Thread.sleep(2.msecs);
     }
   }
+  public void switch2BAOS() {
+    writeln("Switching to BAOS mode.");
+    ubyte[] switchFrame = [0xf6, 0x00, 0x08, 0x01, 0x34, 0x10, 0x01, 0xf0];
+    commonRequest(switchFrame);
+  }
 
   // constructor
   this(string device = "/dev/ttyS1", string params = "19200:8E1", int req_timeout = 300) {

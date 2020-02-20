@@ -1270,6 +1270,7 @@ class DatapointSdk {
   }
   public void resetBaos() {
     baos.reset();
+    baos.switch2BAOS();
   }
 
   // on incoming reset req. ETS download/bus dis and then -connected
