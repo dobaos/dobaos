@@ -1,5 +1,7 @@
 module main;
 import core.thread;
+import std.algorithm: canFind;
+import std.conv;
 import std.stdio;
 import std.bitmanip;
 import std.range.primitives : empty;
@@ -15,55 +17,77 @@ import logo;
 import baos;
 import datapoints;
 import object_server;
-import dsm;
+import redis_dsm;
 import sdk;
 import errors;
 
-enum VERSION = "06_feb_2020";
+enum VERSION = "10_mar_2020";
 
 // struct for commandline params
-private struct Config
-{
+private struct Config {
+  @Parameter("config_prefix", 'c')
+    @Description("Prefix for config key names. dobaos_config_uart_device, etc.. Default: dobaos_config_")
+    string config_prefix;
+
   @Parameter("device", 'd')
-  @Description("UART device. Default: /dev/ttyS1")
-  string device;
-
-  @Parameter("params", 'p')
-  @Description("Serialport parameters. Default: 19200:8E1")
-  string params;
-
-  @Parameter("req_channel", 'r')
-  @Description("Pub/Sub channel for datapoint requests. Default: dobaos_req")
-  string req_channel;
-
-  @Parameter("service_channel", 's')
-  @Description("Pub/sub channel for service requests. Default: dobaos_service")
-  string service_channel;
-
-  @Parameter("bcast_channel", 'b')
-  @Description("Pub/sub channel for broadcasted values. Default: dobaos_cast")
-  string bcast_channel;
+    @Description("UART device. Default: /dev/ttyS1")
+    string device;
 }
 
-void main()
-{
+void main() {
   print_logo();
 
+  auto dsm = new RedisDsm("127.0.0.1", cast(ushort)6379);
   // parse args
   auto config = parseArguments!Config();
-  string device = config.device.length > 1 ? config.device : "/dev/ttyS1";
-  string params = config.params.length > 1 ? config.params : "19200:8E1";
-  string req_channel = config.req_channel.length > 1 ? config.req_channel : "dobaos_req";
-  string service_channel = config.service_channel.length > 1 ? config.service_channel : "dobaos_service";
-  string bcast_channel = config.bcast_channel.length > 1 ? config.bcast_channel : "dobaos_cast";
-  string service_cast = "dobaos_cast";
+  string config_prefix = config.config_prefix.length > 1 ? config.config_prefix: "dobaos_config_";
+
+  auto device = dsm.getKey(config_prefix ~ "uart_device", "/dev/ttyS1", true);
+  auto params = dsm.getKey(config_prefix ~ "uart_params", "19200:8E1", true);
+
+  auto req_channel = dsm.getKey(config_prefix ~ "req_channel", "dobaos_req", true);
+  auto cast_channel = dsm.getKey(config_prefix ~ "bcast_channel", "dobaos_cast", true);
+  dsm.setChannels(req_channel, cast_channel);
+
+  auto service_channel = dsm.getKey(config_prefix ~ "service_channel", "dobaos_service", true);
+  auto service_cast = dsm.getKey(config_prefix ~ "scast_channel", "dobaos_cast", true);
+  auto stream_prefix = dsm.getKey(config_prefix ~ "stream_prefix", "dobaos_datapoint_", true);
+  auto stream_maxlen = dsm.getKey(config_prefix ~ "stream_maxlen", "1000", true);
+
+  // array of datapoints to store
+  auto store_ids_cfg = dsm.getKey(config_prefix ~ "store_ids", "[]", true);
+
+  int[] store_ids; 
+  try {
+    auto jstore_ids = parseJSON(store_ids_cfg);
+    if (jstore_ids.type() != JSONType.array) {
+      writeln("Store datapoint key value is not an array");
+      return;
+    }
+    store_ids.length = jstore_ids.array.length;
+    auto i = 0;
+    foreach(entry; jstore_ids.array) {
+      if (entry.type() != JSONType.integer) {
+        writeln("Datapoint id in stream store key value is not an integer");
+        return;
+      }
+      store_ids[i] = to!int(entry.integer);
+      i += 1;
+    }
+  } catch(Exception e) {
+    writeln(e);
+    return;
+  } catch(Error e) {
+    writeln(e);
+    return;
+  }
+
 
   StopWatch sw;
   sw.start();
 
   auto sdk = new DatapointSdk(device, params);
 
-  auto dsm = new Dsm("127.0.0.1", cast(ushort)6379, req_channel, bcast_channel);
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     JSONValue res;
 
@@ -117,7 +141,9 @@ void main()
           if (res["payload"].type() == JSONType.array) {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
-            auto count = 0;
+            auto jstream = parseJSON("[]");
+            jstream.array.length = jcast["payload"].array.length;
+            auto count = 0; auto stream_count = 0;
             foreach(value; res["payload"].array) {
               if (value["success"].type() == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
@@ -126,10 +152,30 @@ void main()
                 _jvalue["value"] = value["value"];
                 jcast["payload"].array[count] = _jvalue;
                 count += 1;
+                // check if datapoint should be saved
+                if (store_ids.length == 0) {
+                  continue;
+                }
+
+                int id;
+                if (value["id"].type() == JSONType.integer) {
+                  id = to!int(value["id"].integer);
+                } else if (value["id"].type() == JSONType.uinteger) {
+                  id = to!int(value["id"].uinteger);
+                }
+
+                if (store_ids.canFind(id)) {
+                  jstream[stream_count] = _jvalue;
+                  stream_count += 1;
+                }
               }
+              jstream.array.length = stream_count;
             }
             if (count > 0) {
               dsm.broadcast(jcast);
+            }
+            if (stream_count > 0) {
+              dsm.addToStream(stream_prefix, stream_maxlen, jstream);
             }
           } else if (res["payload"].type() == JSONType.object) {
             auto value = res["payload"];
@@ -140,6 +186,21 @@ void main()
               _jvalue["value"] = value["value"];
               jcast["payload"] = _jvalue;
               dsm.broadcast(jcast);
+
+              // check if datapoint should be saved
+              if (store_ids.length == 0) {
+                return;
+              }
+
+              int id;
+              if (value["id"].type() == JSONType.integer) {
+                id = to!int(value["id"].integer);
+              } else if (value["id"].type() == JSONType.uinteger) {
+                id = to!int(value["id"].uinteger);
+              }
+              if (store_ids.canFind(id)) {
+                dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
+              }
             }
           }
         } catch(Exception e) {
@@ -159,7 +220,9 @@ void main()
           if (res["payload"].type() == JSONType.array) {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
-            auto count = 0;
+            auto jstream = parseJSON("[]");
+            jstream.array.length = jcast["payload"].array.length;
+            auto count = 0; auto stream_count = 0;
             foreach(value; res["payload"].array) {
               if (value["success"].type() == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
@@ -168,10 +231,28 @@ void main()
                 _jvalue["value"] = value["value"];
                 jcast["payload"].array[count] = _jvalue;
                 count += 1;
+
+                // check if datapoint should be stored
+                if (store_ids.length == 0) {
+                  continue;
+                }
+                int id;
+                if (value["id"].type() == JSONType.integer) {
+                  id = to!int(value["id"].integer);
+                } else if (value["id"].type() == JSONType.uinteger) {
+                  id = to!int(value["id"].uinteger);
+                }
+                if (store_ids.canFind(id)) {
+                  jstream[stream_count] = _jvalue;
+                  stream_count += 1;
+                }
               }
             }
             if (count > 0) {
               dsm.broadcast(jcast);
+            }
+            if (stream_count > 0) {
+              dsm.addToStream(stream_prefix, stream_maxlen, jstream);
             }
           } else if (res["payload"].type() == JSONType.object) {
             auto value = res["payload"];
@@ -182,6 +263,20 @@ void main()
               _jvalue["value"] = value["value"];
               jcast["payload"] = _jvalue;
               dsm.broadcast(jcast);
+
+              // check if datapoint should be stored
+              if (store_ids.length == 0) {
+                return;
+              }
+              int id;
+              if (value["id"].type() == JSONType.integer) {
+                id = to!int(value["id"].integer);
+              } else if (value["id"].type() == JSONType.uinteger) {
+                id = to!int(value["id"].uinteger);
+              }
+              if (store_ids.canFind(id)) {
+                dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
+              }
             }
           }
         } catch(Exception e) {
@@ -244,7 +339,7 @@ void main()
   dsm.subscribe(toDelegate(&handleRequest));
 
   // service messages
-  auto ssm = new Dsm("127.0.0.1", cast(ushort)6379, service_channel, service_cast);
+  auto ssm = new RedisDsm("127.0.0.1", cast(ushort)6379, service_channel, service_cast);
   void handleService(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     JSONValue res;
 
@@ -315,7 +410,44 @@ void main()
     JSONValue ind = sdk.processInd();
     if (ind.type() != JSONType.null_) {
       dsm.broadcast(ind);
+
+
+      // now, if we got datapoint value that should be saved
+      if (ind["method"].str == "datapoint value" && store_ids.length > 0) {
+        if (ind["payload"].type == JSONType.array) {
+          auto jstream = parseJSON("[]");
+          jstream.array.length = ind["payload"].array.length;
+          auto stream_count = 0;
+          foreach(value; ind["payload"].array) {
+            int id;
+            if (value["id"].type() == JSONType.integer) {
+              id = to!int(value["id"].integer);
+            } else if (value["id"].type() == JSONType.uinteger) {
+              id = to!int(value["id"].uinteger);
+            }
+            if (store_ids.canFind(id)) {
+              jstream[stream_count] = value;
+              stream_count += 1;
+            }
+          }
+          if (stream_count > 0) {
+            dsm.addToStream(stream_prefix, stream_maxlen, jstream);
+          }
+        } else if (ind["payload"].type == JSONType.object) {
+            int id;
+            auto value = ind["payload"];
+            if (value["id"].type() == JSONType.integer) {
+              id = to!int(value["id"].integer);
+            } else if (value["id"].type() == JSONType.uinteger) {
+              id = to!int(value["id"].uinteger);
+            }
+          if (store_ids.canFind(ind["payload"]["id"].integer)) {
+            dsm.addToStream(stream_prefix, stream_maxlen, ind["payload"]);
+          }
+        }
+      }
     }
+
     dsm.processMessages();
     ssm.processMessages();
 

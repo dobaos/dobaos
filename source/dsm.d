@@ -12,7 +12,8 @@
 //    payload: {id: 1, value: 1, raw: "AZAz=" }/[{], ]/"string"
 //  }
 
-module dsm;
+module redis_dsm;
+import std.conv;
 import std.stdio;
 import std.json;
 import std.functional;
@@ -20,16 +21,31 @@ import std.functional;
 import tinyredis;
 import tinyredis.subscriber;
 
-class Dsm {
-  private Redis pub;
+class RedisDsm {
+  private Redis pub, redis;
   private Subscriber sub;
   private string redis_host, req_channel, bcast_channel;
+  private string redis_stream;
   private ushort redis_port;
-  this(string redis_host, ushort redis_port, string req_channel, string bcast_channel) {
+
+  this(string redis_host, ushort redis_port, string req_channel,
+      string bcast_channel) {
     // init publisher
 
     this.redis_host = redis_host;
     this.redis_port = redis_port;
+    this.req_channel = req_channel;
+    this.bcast_channel = bcast_channel;
+    redis = new Redis(redis_host, redis_port);
+  }
+  this(string redis_host, ushort redis_port) {
+    // init publisher
+
+    this.redis_host = redis_host;
+    this.redis_port = redis_port;
+    redis = new Redis(redis_host, redis_port);
+  }
+  public void setChannels(string req_channel, string bcast_channel) {
     this.req_channel = req_channel;
     this.bcast_channel = bcast_channel;
   }
@@ -72,5 +88,37 @@ class Dsm {
   }
   public void processMessages() {
     sub.processMessages();
+  }
+  public string getKey(string key) {
+    return redis.send("GET " ~ key).toString();
+  }
+  public string getKey(string key, string default_value, bool set_if_null = false) {
+    auto keyValue = redis.send("GET " ~ key).toString();
+
+    if (keyValue.length > 0) {
+      return keyValue;
+    } else if (set_if_null) {
+      redis.send("SET " ~ key ~ " " ~ default_value);
+      return default_value;
+    } else {
+      return default_value;
+    }
+  }
+  public void addToStream(string key_prefix, string maxlen, JSONValue data) {
+    if (data.type() == JSONType.array) {
+      foreach(entry; data.array) {
+        addToStream(key_prefix, maxlen, entry);
+      }
+      return;
+    } else if (data.type() == JSONType.object) {
+      auto command = "XADD ";
+      command ~= key_prefix ~ data["id"].toJSON() ~ " ";
+      command ~= "MAXLEN ~ " ~ to!string(maxlen) ~ " ";
+      command ~= "* "; // id
+      command ~= "id " ~ data["id"].toJSON() ~ " ";
+      command ~= "value " ~ data["value"].toJSON() ~ " ";
+      command ~= "raw " ~ data["raw"].toJSON() ~ " ";
+      redis.send(command);
+    }
   }
 }
