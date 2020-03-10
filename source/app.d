@@ -30,7 +30,7 @@ private struct Config {
     string config_prefix;
 
   @Parameter("device", 'd')
-    @Description("UART device. Default: /dev/ttyS1")
+    @Description("UART device. Setting this argument will overwrite redis key value. Default: /dev/ttyAMA0")
     string device;
 }
 
@@ -42,7 +42,12 @@ void main() {
   auto config = parseArguments!Config();
   string config_prefix = config.config_prefix.length > 1 ? config.config_prefix: "dobaos_config_";
 
-  auto device = dsm.getKey(config_prefix ~ "uart_device", "/dev/ttyS1", true);
+  auto device = dsm.getKey(config_prefix ~ "uart_device", "/dev/ttyAMA0", true);
+  // if device parameter was given in commandline arguments
+  if (config.device.length > 1) {
+    device = config.device;
+    dsm.setKey(config_prefix ~ "uart_device", device);
+  }
   auto params = dsm.getKey(config_prefix ~ "uart_params", "19200:8E1", true);
 
   auto req_channel = dsm.getKey(config_prefix ~ "req_channel", "dobaos_req", true);

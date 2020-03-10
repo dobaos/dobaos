@@ -52,7 +52,31 @@ sudo cp ./dobaos /usr/local/bin/dobaos
 
 so, now you are able to run it with just `dobaos` command.
 
-Note: by default dobaos connects to `/dev/ttyS1` device. If you have other, use `-d`(`--device`) command line argument.
+Since version 10\_mar\_2020 default device is /dev/ttyAMA0 and all config now is stored at redis database. At a first run, dobaos service creates all needed keys there. Default config prefix is `dobaos_config_`. It can be changed with command line argument `--config_prefix`/`-c`.
+
+To see created keys:
+
+```text
+$ redis-cli keys dobaos_config_*
+1) "dobaos_config_uart_params"
+2) "dobaos_config_scast_channel"
+3) "dobaos_config_req_channel"
+4) "dobaos_config_store_ids"
+5) "dobaos_config_stream_maxlen"
+6) "dobaos_config_stream_prefix"
+7) "dobaos_config_bcast_channel"
+8) "dobaos_config_uart_device"
+9) "dobaos_config_service_channel"
+```
+
+To get or change config key value `redis-cli get` and `redis-cli set` command may be executed.
+
+Running dobaos with `--device`/`-d` argument will overwrite `dobaos_config_uart_device` value.
+
+```text
+redis-cli get dobaos_config_uart_device
+redis-cli set dobaos_config_uart_device /dev/ttyS1
+```
 
 ## Create systemd service
 

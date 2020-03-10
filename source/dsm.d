@@ -104,6 +104,9 @@ class RedisDsm {
       return default_value;
     }
   }
+  public string setKey(string key, string value) {
+    return redis.send("SET " ~ key ~ " " ~ value).toString();
+  }
   public void addToStream(string key_prefix, string maxlen, JSONValue data) {
     if (data.type() == JSONType.array) {
       foreach(entry; data.array) {
