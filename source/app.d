@@ -59,24 +59,24 @@ void main() {
   auto stream_prefix = dsm.getKey(config_prefix ~ "stream_prefix", "dobaos_datapoint_", true);
   auto stream_maxlen = dsm.getKey(config_prefix ~ "stream_maxlen", "1000", true);
 
-  // array of datapoints to store
-  auto store_ids_cfg = dsm.getKey(config_prefix ~ "store_ids", "[]", true);
+  // array of datapoints to stream in redis
+  auto stream_ids_cfg = dsm.getKey(config_prefix ~ "stream_ids", "[]", true);
 
-  int[] store_ids; 
+  int[] stream_ids; 
   try {
-    auto jstore_ids = parseJSON(store_ids_cfg);
-    if (jstore_ids.type() != JSONType.array) {
+    auto jstream_ids = parseJSON(stream_ids_cfg);
+    if (jstream_ids.type() != JSONType.array) {
       writeln("Store datapoint key value is not an array");
       return;
     }
-    store_ids.length = jstore_ids.array.length;
+    stream_ids.length = jstream_ids.array.length;
     auto i = 0;
-    foreach(entry; jstore_ids.array) {
+    foreach(entry; jstream_ids.array) {
       if (entry.type() != JSONType.integer) {
-        writeln("Datapoint id in stream store key value is not an integer");
+        writeln("Datapoint id in stream_ids key value is not an integer");
         return;
       }
-      store_ids[i] = to!int(entry.integer);
+      stream_ids[i] = to!int(entry.integer);
       i += 1;
     }
   } catch(Exception e) {
@@ -158,7 +158,7 @@ void main() {
                 jcast["payload"].array[count] = _jvalue;
                 count += 1;
                 // check if datapoint should be saved
-                if (store_ids.length == 0) {
+                if (stream_ids.length == 0) {
                   continue;
                 }
 
@@ -169,7 +169,7 @@ void main() {
                   id = to!int(value["id"].uinteger);
                 }
 
-                if (store_ids.canFind(id)) {
+                if (stream_ids.canFind(id)) {
                   jstream[stream_count] = _jvalue;
                   stream_count += 1;
                 }
@@ -193,7 +193,7 @@ void main() {
               dsm.broadcast(jcast);
 
               // check if datapoint should be saved
-              if (store_ids.length == 0) {
+              if (stream_ids.length == 0) {
                 return;
               }
 
@@ -203,7 +203,7 @@ void main() {
               } else if (value["id"].type() == JSONType.uinteger) {
                 id = to!int(value["id"].uinteger);
               }
-              if (store_ids.canFind(id)) {
+              if (stream_ids.canFind(id)) {
                 dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
               }
             }
@@ -238,7 +238,7 @@ void main() {
                 count += 1;
 
                 // check if datapoint should be stored
-                if (store_ids.length == 0) {
+                if (stream_ids.length == 0) {
                   continue;
                 }
                 int id;
@@ -247,7 +247,7 @@ void main() {
                 } else if (value["id"].type() == JSONType.uinteger) {
                   id = to!int(value["id"].uinteger);
                 }
-                if (store_ids.canFind(id)) {
+                if (stream_ids.canFind(id)) {
                   jstream[stream_count] = _jvalue;
                   stream_count += 1;
                 }
@@ -270,7 +270,7 @@ void main() {
               dsm.broadcast(jcast);
 
               // check if datapoint should be stored
-              if (store_ids.length == 0) {
+              if (stream_ids.length == 0) {
                 return;
               }
               int id;
@@ -279,7 +279,7 @@ void main() {
               } else if (value["id"].type() == JSONType.uinteger) {
                 id = to!int(value["id"].uinteger);
               }
-              if (store_ids.canFind(id)) {
+              if (stream_ids.canFind(id)) {
                 dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
               }
             }
@@ -418,7 +418,7 @@ void main() {
 
 
       // now, if we got datapoint value that should be saved
-      if (ind["method"].str == "datapoint value" && store_ids.length > 0) {
+      if (ind["method"].str == "datapoint value" && stream_ids.length > 0) {
         if (ind["payload"].type == JSONType.array) {
           auto jstream = parseJSON("[]");
           jstream.array.length = ind["payload"].array.length;
@@ -430,7 +430,7 @@ void main() {
             } else if (value["id"].type() == JSONType.uinteger) {
               id = to!int(value["id"].uinteger);
             }
-            if (store_ids.canFind(id)) {
+            if (stream_ids.canFind(id)) {
               jstream[stream_count] = value;
               stream_count += 1;
             }
@@ -446,7 +446,7 @@ void main() {
             } else if (value["id"].type() == JSONType.uinteger) {
               id = to!int(value["id"].uinteger);
             }
-          if (store_ids.canFind(ind["payload"]["id"].integer)) {
+          if (stream_ids.canFind(ind["payload"]["id"].integer)) {
             dsm.addToStream(stream_prefix, stream_maxlen, ind["payload"]);
           }
         }
