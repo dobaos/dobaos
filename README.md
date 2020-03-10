@@ -198,6 +198,18 @@ There is messages broadcasted to `bcast_channel` on incoming datapoint values or
 
 Also, on server item change(e.g. programming mode button or bus connect/disconnect), message with `server item` as a method is broadcasted.
 
+## Redis streams
+
+Since version 10\_mar\_2020, there is support for Redis streams(redis v5.0.0 at least required).
+
+Streaming is customizable by changing keys `dobaos_config_stream_*` (default dobaos prefix).
+
+Maxlen parameter is a maximum amount of one datapoint record.
+
+Stream\_ids is an json serialized array, default is `[]`. Put your datapoints there: `[1, 2, 3, 5, 10]`.
+
+And prefix is used for naming. Default is `dobaos_datapoint_`, stream names will be `dobaos_datapoint_1`, `dobaos_datapoint_2`, etc.
+
 ## Datapoint value formats
 
 | DPT | getValue returns JSON value| setValue accepts JSON value|
