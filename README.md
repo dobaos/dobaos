@@ -175,7 +175,7 @@ Response:
 
 | method | payload | Description |
 | :--- | :--- | :--- |
-| get description | `null/int/Array` | Get description for all/one/multiple datapoints. Use `null` payload to get all descriptions. |
+| get description | `null/int/Array/string` | Get description for all/one/multiple datapoints. Use `null` or `"*"` string as a payload to get all descriptions. |
 | get value | `null/int/Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
 | set value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints. Sends to bus. A `raw` field should be base64 encoded binary data. |
 | put value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints without sending to bus. Store only in BAOS module. A `raw` field should be base64 encoded binary data. |
