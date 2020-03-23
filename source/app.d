@@ -21,7 +21,7 @@ import redis_dsm;
 import sdk;
 import errors;
 
-enum VERSION = "10_mar_2020";
+enum VERSION = "23_mar_2020";
 
 // struct for commandline params
 private struct Config {
@@ -147,7 +147,6 @@ void main() {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
             auto jstream = parseJSON("[]");
-            jstream.array.length = jcast["payload"].array.length;
             auto count = 0; auto stream_count = 0;
             foreach(value; res["payload"].array) {
               if (value["success"].type() == JSONType.true_) {
@@ -170,11 +169,10 @@ void main() {
                 }
 
                 if (stream_ids.canFind(id)) {
-                  jstream[stream_count] = _jvalue;
+                  jstream.array ~= _jvalue;
                   stream_count += 1;
                 }
               }
-              jstream.array.length = stream_count;
             }
             if (count > 0) {
               dsm.broadcast(jcast);
@@ -226,7 +224,6 @@ void main() {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
             auto jstream = parseJSON("[]");
-            jstream.array.length = jcast["payload"].array.length;
             auto count = 0; auto stream_count = 0;
             foreach(value; res["payload"].array) {
               if (value["success"].type() == JSONType.true_) {
@@ -248,7 +245,7 @@ void main() {
                   id = to!int(value["id"].uinteger);
                 }
                 if (stream_ids.canFind(id)) {
-                  jstream[stream_count] = _jvalue;
+                  jstream.array ~= _jvalue;
                   stream_count += 1;
                 }
               }
@@ -416,12 +413,10 @@ void main() {
     if (ind.type() != JSONType.null_) {
       dsm.broadcast(ind);
 
-
       // now, if we got datapoint value that should be saved
       if (ind["method"].str == "datapoint value" && stream_ids.length > 0) {
         if (ind["payload"].type == JSONType.array) {
           auto jstream = parseJSON("[]");
-          jstream.array.length = ind["payload"].array.length;
           auto stream_count = 0;
           foreach(value; ind["payload"].array) {
             int id;
@@ -431,7 +426,7 @@ void main() {
               id = to!int(value["id"].uinteger);
             }
             if (stream_ids.canFind(id)) {
-              jstream[stream_count] = value;
+              jstream.array ~= value;
               stream_count += 1;
             }
           }
@@ -439,13 +434,13 @@ void main() {
             dsm.addToStream(stream_prefix, stream_maxlen, jstream);
           }
         } else if (ind["payload"].type == JSONType.object) {
-            int id;
-            auto value = ind["payload"];
-            if (value["id"].type() == JSONType.integer) {
-              id = to!int(value["id"].integer);
-            } else if (value["id"].type() == JSONType.uinteger) {
-              id = to!int(value["id"].uinteger);
-            }
+          int id;
+          auto value = ind["payload"];
+          if (value["id"].type() == JSONType.integer) {
+            id = to!int(value["id"].integer);
+          } else if (value["id"].type() == JSONType.uinteger) {
+            id = to!int(value["id"].uinteger);
+          }
           if (stream_ids.canFind(ind["payload"]["id"].integer)) {
             dsm.addToStream(stream_prefix, stream_maxlen, ind["payload"]);
           }

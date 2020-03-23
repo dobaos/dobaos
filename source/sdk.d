@@ -212,7 +212,7 @@ class DatapointSdk {
             } else {
               throw Errors.wrong_value;
             }
-            
+
             _val_ctrl["control"] = _ctrl;
             _val_ctrl["value"] = _val;
           } else {
@@ -249,7 +249,7 @@ class DatapointSdk {
             } else {
               throw Errors.wrong_value;
             }
-            
+
             _dir_step["direction"] = _dir;
             _dir_step["step"] = _step;
           } else {
@@ -407,7 +407,7 @@ class DatapointSdk {
             } else {
               throw Errors.wrong_value;
             }
-            
+
             _time["day"] = _day;
             _time["hour"] = _hour;
             _time["minutes"] = _minutes;
@@ -461,7 +461,7 @@ class DatapointSdk {
             } else {
               throw Errors.wrong_value;
             }
-            
+
             _date["day"] = _day;
             _date["month"] = _month;
             _date["year"] = _year;
@@ -561,7 +561,7 @@ class DatapointSdk {
             } else {
               throw Errors.wrong_value;
             }
-            
+
             _learn_num["learn"] = _learn;
             _learn_num["number"] = _num;
           } else {
@@ -583,7 +583,13 @@ class DatapointSdk {
 
   public JSONValue getDescription(JSONValue payload) {
     JSONValue res;
-    if(payload.type() == JSONType.null_) {
+    if(payload.type() == JSONType.null_ || 
+        payload.type() == JSONType.string) {
+      if (payload.type() == JSONType.string) {
+        if (payload.str != "*") {
+          throw Errors.wrong_payload;
+        }
+      }
       // return all descriptions
       JSONValue allDatapointId = parseJSON("[]");
       allDatapointId.array.length = descriptions.keys.length;
@@ -886,14 +892,6 @@ class DatapointSdk {
             resCount += 1;
           }
         } else {
-//          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
-//            auto _res = parseJSON("{}");
-//            _res["id"] = rawValues[i].id;
-//            _res["success"] = false;
-//            _res["error"] = setValResult.error.message;
-//            res.array[resCount] = _res;
-//            resCount += 1;
-//          }
           throw setValResult.error;
         }
       }
@@ -1022,14 +1020,6 @@ class DatapointSdk {
             resCount += 1;
           }
         } else {
-//          for(auto i = currentIndex - count; i < currentIndex; i += 1) {
-//            auto _res = parseJSON("{}");
-//            _res["id"] = rawValues[i].id;
-//            _res["success"] = false;
-//            _res["error"] = setValResult.error.message;
-//            res.array[resCount] = _res;
-//            resCount += 1;
-//          }
           throw setValResult.error;
         }
       }
@@ -1157,7 +1147,7 @@ class DatapointSdk {
           if (e == Errors.datapoint_not_found) {
             print_logo();
             writeln(" ==== Unknown datapoint indication was received ==== ");
-            
+
             bool initialized = false;
             while(!initialized) {
               // set flags to false.
@@ -1278,7 +1268,7 @@ class DatapointSdk {
     if (baos.processResetInd()) {
       print_logo();
       writeln(" ==== Reset indication was received ==== ");
-      
+
       bool initialized = false;
       while(!initialized) {
         // set flags to false.
