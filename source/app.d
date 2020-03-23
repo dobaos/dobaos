@@ -2,6 +2,7 @@ module main;
 import core.thread;
 import std.algorithm: canFind;
 import std.conv;
+import std.format;
 import std.stdio;
 import std.bitmanip;
 import std.range.primitives : empty;
@@ -169,6 +170,9 @@ void main() {
                 }
 
                 if (stream_ids.canFind(id)) {
+                  if (_jvalue["value"].type() == JSONType.float_) {
+                    _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
+                  }
                   jstream.array ~= _jvalue;
                   stream_count += 1;
                 }
@@ -202,6 +206,9 @@ void main() {
                 id = to!int(value["id"].uinteger);
               }
               if (stream_ids.canFind(id)) {
+                if (_jvalue["value"].type() == JSONType.float_) {
+                  _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
+                }
                 dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
               }
             }
@@ -245,6 +252,9 @@ void main() {
                   id = to!int(value["id"].uinteger);
                 }
                 if (stream_ids.canFind(id)) {
+                  if (_jvalue["value"].type() == JSONType.float_) {
+                    _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
+                  }
                   jstream.array ~= _jvalue;
                   stream_count += 1;
                 }
@@ -277,6 +287,9 @@ void main() {
                 id = to!int(value["id"].uinteger);
               }
               if (stream_ids.canFind(id)) {
+                if (_jvalue["value"].type() == JSONType.float_) {
+                  _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
+                }
                 dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
               }
             }
@@ -426,6 +439,9 @@ void main() {
               id = to!int(value["id"].uinteger);
             }
             if (stream_ids.canFind(id)) {
+              if (value["value"].type() == JSONType.float_) {
+                value["value"] = format!"%0.2f"(value["value"].floating);
+              }
               jstream.array ~= value;
               stream_count += 1;
             }
@@ -442,6 +458,9 @@ void main() {
             id = to!int(value["id"].uinteger);
           }
           if (stream_ids.canFind(ind["payload"]["id"].integer)) {
+              if (ind["payload"]["value"].type() == JSONType.float_) {
+                ind["payload"]["value"] = format!"%0.2f"(ind["payload"]["value"].floating);
+              }
             dsm.addToStream(stream_prefix, stream_maxlen, ind["payload"]);
           }
         }
