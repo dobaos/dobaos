@@ -1,10 +1,7 @@
-/****
-TODO: convert funcs
- ****/
-
 module datapoints;
 
 import std.algorithm;
+import std.conv;
 import std.math;
 import std.bitmanip;
 import std.range.primitives : empty;
@@ -33,7 +30,6 @@ enum DatapointType {
 
 class DPT1 {
   static public bool toBoolean(ubyte[] raw) {
-    assert(raw.length == 1);
     auto value = raw.read!bool();
     return value;
   }
@@ -112,7 +108,6 @@ class DPT4 {
 
 class DPT5 {
   static public ubyte toUByte(ubyte[] raw) {
-    assert(raw.length == 1);
     auto value = raw.read!ubyte();
     return value;
   }
@@ -180,7 +175,6 @@ class DPT8 {
 
 class DPT9 {
   static public float toFloat(ubyte[] raw) {
-    assert(raw.length == 2);
     ushort int_value = raw.read!ushort();
     auto sign = !!(int_value & 0x8000);
     auto exp = (int_value & 0x7800) >> 11;
@@ -194,7 +188,17 @@ class DPT9 {
     return value;
   }
   static public ubyte[] toUBytes(float value) {
-    auto sign = 0x00;
+    int sign = 0;
+    int exp = 0;
+    int mant = 0;
+    if (value < 0) sign = 1;
+    mant = to!int(value*100);
+    while (!(-2048 <= mant && mant <= 2047)) {
+      mant = mant >> 1;
+      exp += 1;
+    }
+
+    /** another possible implementation
     int exp = cast(int) (floor(fmax((log(abs(value) * 100) / log(2)) - 10, 0)));
     int mant = cast(int) (floor(value * 100) / (1 << exp));
 
@@ -202,13 +206,12 @@ class DPT9 {
       sign = 0x01;
       mant = (~(mant*-1) + 1) & 0x07FF;
     }
+    **/
 
-    ushort val = ((sign << 15) | (exp << 11) | mant) & 0xFFFF;
-
+    ushort val = to!ushort((sign << 15) | (exp << 11) | (mant & 0x07FF));
     ubyte[] res;
     res.length = 2;
-    res[0] = cast(ubyte) (val >> 8);
-    res[1] = cast(ubyte) (val & 0xFF);
+    res.write!ushort(val, 0);
 
     return res;
   }
