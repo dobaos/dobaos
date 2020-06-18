@@ -2,13 +2,13 @@
 	"authors": [
 		"Vladimir Shabunin"
 	],
-	"copyright": "Copyright © 2019, undefeated",
+	"copyright": "Copyright © 2020, Vladimir Shabunin",
 	"dependencies": {
 		"cli-d": "~>0.1.1",
 		"serialport": "~>2.2.2",
 		"tinyredis": "~>2.2.1"
 	},
-	"description": "A minimal D application.",
-	"license": "proprietary",
+	"description": "KNX BAOS stack in dlang.",
+	"license": "MIT",
 	"name": "dobaos"
 }
