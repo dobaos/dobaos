@@ -22,7 +22,7 @@ import redis_dsm;
 import sdk;
 import errors;
 
-enum VERSION = "23_mar_2020";
+enum VERSION = "26_jun_2020";
 
 // struct for commandline params
 private struct Config {
@@ -55,8 +55,6 @@ void main() {
   auto cast_channel = dsm.getKey(config_prefix ~ "bcast_channel", "dobaos_cast", true);
   dsm.setChannels(req_channel, cast_channel);
 
-  auto service_channel = dsm.getKey(config_prefix ~ "service_channel", "dobaos_service", true);
-  auto service_cast = dsm.getKey(config_prefix ~ "scast_channel", "dobaos_cast", true);
   auto stream_prefix = dsm.getKey(config_prefix ~ "stream_prefix", "dobaos_datapoint_", true);
   auto stream_maxlen = dsm.getKey(config_prefix ~ "stream_maxlen", "1000", true);
 
@@ -344,49 +342,6 @@ void main() {
           sendResponse(res);
         }
         break;
-      default:
-        res["method"] = "error";
-        res["payload"] = Errors.unknown_method.message;
-        sendResponse(res);
-        break;
-    }
-  }
-  dsm.subscribe(toDelegate(&handleRequest));
-
-  // service messages
-  auto ssm = new RedisDsm("127.0.0.1", cast(ushort)6379, service_channel, service_cast);
-  void handleService(JSONValue jreq, void delegate(JSONValue) sendResponse) {
-    JSONValue res;
-
-    auto jmethod = ("method" in jreq);
-    if (jmethod is null) {
-      res["success"] = false;
-      res["payload"] = Errors.no_method_field.message;
-      sendResponse(res);
-      return;
-    }
-    auto jpayload = ("payload" in jreq);
-    if (jpayload is null) {
-      res["success"] = false;
-      res["payload"] = Errors.no_payload_field.message;
-      sendResponse(res);
-      return;
-    }
-
-    string method = ("method" in jreq).str;
-    switch(method) {
-      case "reset":
-        try {
-          sdk.interrupt();
-          res["method"] = "success";
-          res["payload"] = null;
-          sendResponse(res);
-        } catch(Exception e) {
-          res["method"] = "error";
-          res["payload"] = e.message;
-          sendResponse(res);
-        }
-        break;
       case "version":
         try {
           res["method"] = "success";
@@ -398,6 +353,23 @@ void main() {
           sendResponse(res);
         }
         break;
+      case "reset":
+        try {
+          writeln("==== Reset request received ====");
+          sdk.resetBaos();
+          bool initialized = false;
+          while(!initialized) {
+            initialized = sdk.init();
+          }
+          res["method"] = "success";
+          res["payload"] = true;
+          sendResponse(res);
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
       default:
         res["method"] = "error";
         res["payload"] = Errors.unknown_method.message;
@@ -405,11 +377,10 @@ void main() {
         break;
     }
   }
-  ssm.subscribe(toDelegate(&handleService));
+  dsm.subscribe(toDelegate(&handleRequest));
 
   writeln("IPC ready");
 
-  sdk.setInterruptsDelegate(toDelegate(&ssm.processMessages));
   sdk.resetBaos();
   sdk.init();
 
@@ -420,7 +391,6 @@ void main() {
   // process incoming values
   while(true) {
     sdk.processResetInd();
-    sdk.processInterrupts();
 
     JSONValue ind = sdk.processInd();
     if (ind.type() != JSONType.null_) {
@@ -468,7 +438,6 @@ void main() {
     }
 
     dsm.processMessages();
-    ssm.processMessages();
 
     // calculate approximate sleep time depending on baudrate.
     // assuming default baud 19200 bits per second is used.

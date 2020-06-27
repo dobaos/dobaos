@@ -1154,7 +1154,6 @@ class DatapointSdk {
               // if bus was connected/disconnected few times
               // or there was "reset" request
               // while initializing sdk
-              baos.processInterrupts();
               baos.processResetInd();
               // and init
               initialized = init();
@@ -1255,9 +1254,6 @@ class DatapointSdk {
     return true;
   }
 
-  public void setInterruptsDelegate(void delegate() interruptsDelegate) {
-    baos.processIncomingInterrupts = interruptsDelegate;
-  }
   public void resetBaos() {
     baos.reset();
     baos.switch2BAOS();
@@ -1275,34 +1271,11 @@ class DatapointSdk {
         // if bus was connected/disconnected few times
         // or there was second "reset" request
         // while initializing sdk
-        baos.processInterrupts();
         baos.processResetInd();
         // and init
         initialized = init();
       }
     }
-  }
-
-  public void processInterrupts() {
-    if (baos.processInterrupts()) {
-      print_logo();
-      writeln(" ==== Reset request was received ==== ");
-      bool initialized = false;
-      while(!initialized) {
-        // set flags to false.
-        // if there was second "reset" request
-        // or bus was connected/disconnected
-        // while initializing sdk
-        baos.processInterrupts();
-        baos.processResetInd();
-        // and init;
-        initialized = init();
-      }
-    }
-  }
-
-  public void interrupt() {
-    baos.interrupt();
   }
 
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {

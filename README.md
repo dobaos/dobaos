@@ -66,7 +66,6 @@ $ redis-cli keys dobaos_config_*
 6) "dobaos_config_stream_prefix"
 7) "dobaos_config_bcast_channel"
 8) "dobaos_config_uart_device"
-9) "dobaos_config_service_channel"
 ```
 
 To get or change config key value `redis-cli get` and `redis-cli set` command may be executed.
@@ -146,7 +145,7 @@ On redis message: parse JSON, send request to UART, then respond.
 
 ## Protocol
 
-JSON messages should be sent to pub/sub channel. Apllication is listening two channels: one for datapoint methods, second - for service methods.
+JSON messages should be sent to pub/sub channel, "dobaos_req" by default.
 
 ```text
 {

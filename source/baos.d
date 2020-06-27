@@ -29,8 +29,6 @@ class Baos {
   private bool _ackReceived = true;
   private bool _responseReceived = true;
 
-  private bool _interrupted = false;
-
   // timeout
   private int req_timeout;
   private bool _timeout = false;
@@ -97,8 +95,6 @@ class Baos {
     _timeout = dur > msecs(req_timeout);
   }
 
-  public void delegate() processIncomingInterrupts;
-
   public OS_Message processInd() {
     processIncomingData();
     if (_ind.length > 0) {
@@ -123,12 +119,6 @@ class Baos {
 
     return res;
   }
-  public bool processInterrupts() {
-    bool res = _interrupted;
-    _interrupted = false;
-
-    return res;
-  }
 
   private OS_Message commonRequest(ubyte[] message) {
     // reqs are syncronuous, so, no queue is required
@@ -149,21 +139,12 @@ class Baos {
       com.write(buffer);
       sw.reset();
       sw.start();
-      // пока не получен ответ, либо индикатор сброса, либо прерывание
-      while(!(_responseReceived || _resetInd || _interrupted || _timeout)) {
+      // пока не получен ответ, либо индикатор сброса, либо таймаут
+      while(!(_responseReceived || _resetInd || _timeout)) {
         try {
           processIncomingData();
-          processIncomingInterrupts();
           processResponseTimeout();
           if (_resetInd) {
-            _response.success = false;
-            _response.service = OS_Services.unknown;
-            _response.error = Errors.interrupted;
-
-            _responseReceived = true;
-            _ackReceived = true;
-          }
-          if (_interrupted) {
             _response.success = false;
             _response.service = OS_Services.unknown;
             _response.error = Errors.interrupted;
@@ -216,10 +197,6 @@ class Baos {
     return commonRequest(OS_Protocol.SetServerItemReq(items));
   }
 
-  public void interrupt() {
-    _interrupted = true;
-  }
-
   public void reset() {
     // send reset request
     FT12Frame resetFrame;
@@ -231,10 +208,12 @@ class Baos {
     // init var
     _resetInd = false;
     _resetAckReceived = false;
-    // and wait until it is received
-    while(!(_resetAckReceived || _interrupted || _resetInd || _timeout)) {
+
+    // reset timeout watcher
+    sw.reset();
+    // and wait until acknowledge is received
+    while(!(_resetAckReceived || _resetInd || _timeout)) {
       processIncomingData();
-      processIncomingInterrupts();
       processResponseTimeout();
       if (_timeout) {
         writeln("ERR_TIMEOUT");
