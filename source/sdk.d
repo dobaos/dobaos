@@ -729,7 +729,6 @@ class DatapointSdk {
       idUniq.length = countUniq;
 
       res = parseJSON("[]");
-      res.array.length = 1000;
 
       // now calculate max length of response
       auto headerSize = 6;
@@ -762,8 +761,12 @@ class DatapointSdk {
         }
         foreach(_val; val.datapoint_values) {
           if ((_val.id in descriptions) != null) {
-            res.array[resCount] = convert2JSONValue(_val);
-            values[_val.id] = res.array[resCount];
+            // store in any case
+            values[_val.id] = convert2JSONValue(_val);
+            // but return in response only if id presented in request payload
+            if (canFind(idUniq, _val.id)) {
+              res.array ~= values[_val.id];
+            }
             resCount += 1;
           }
         }
@@ -804,7 +807,6 @@ class DatapointSdk {
           currentLen = 0;
         }
       }
-      res.array.length = resCount;
     } else if(payload.type() == JSONType.null_) {
       JSONValue allDatapoints = parseJSON("[]");
       allDatapoints.array.length = descriptions.keys.length;
