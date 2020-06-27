@@ -134,6 +134,17 @@ void main() {
           sendResponse(res);
         }
         break;
+      case "get stored":
+        try {
+          res["method"] = "success";
+          res["payload"] = sdk.getStored(jreq["payload"]);
+          sendResponse(res);
+        } catch(Exception e) {
+          res["method"] = "error";
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
       case "set value":
         try {
           res["method"] = "success";

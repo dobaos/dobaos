@@ -6,11 +6,12 @@ module sdk;
 
 import core.thread;
 import std.algorithm;
-import std.stdio;
-import std.bitmanip;
-import std.range.primitives : empty;
-import std.json;
 import std.base64;
+import std.bitmanip;
+import std.conv;
+import std.json;
+import std.range.primitives : empty;
+import std.stdio;
 
 import logo;
 import object_server;
@@ -32,7 +33,7 @@ class DatapointSdk {
     // get dpt type from descriptions
     // then convert
     JSONValue res;
-    res["id"] = dv.id;
+    res["id"] = to!int(dv.id);
 
     // assert that description can be found
     if ((dv.id in descriptions) is null) {
@@ -107,11 +108,17 @@ class DatapointSdk {
     if (("id" in value) is null) {
       throw Errors.wrong_payload;
     }
-    if (value["id"].type() != JSONType.integer) {
+    if (value["id"].type() != JSONType.integer && 
+          value["id"].type() != JSONType.uinteger) {
       throw Errors.wrong_payload_type;
     }
 
-    auto id = cast(ushort) value["id"].integer;
+    ushort id;
+    if (value["id"].type() == JSONType.uinteger) {
+      id = to!ushort(value["id"].uinteger);
+    } else if (value["id"].type() == JSONType.integer) {
+      id = to!ushort(value["id"].integer);
+    }
     if ((id in descriptions) is null) {
       throw Errors.datapoint_not_found;
     }
@@ -136,7 +143,7 @@ class DatapointSdk {
       } catch(Exception e) {
         throw Errors.wrong_raw_value;
       }
-      res.length = cast(ubyte)res.value.length;
+      res.length = to!ubyte(res.value.length);
     } else {
 
       void assertLongBounds(long val, long low, long high) {
@@ -173,7 +180,7 @@ class DatapointSdk {
             throw Errors.wrong_value_type;
           }
           res.value = DPT1.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt2:
           bool _val = true;
@@ -219,7 +226,7 @@ class DatapointSdk {
             throw Errors.wrong_value_type;
           }
           res.value = DPT2.toUBytes(_val_ctrl);
-          res.length = cast(ubyte) res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt3:
           ubyte _dir = 1;
@@ -242,10 +249,10 @@ class DatapointSdk {
 
             if (_value["step"].type() == JSONType.integer) {
               assertLongBounds(_value.integer, 0, 7);
-              _step = cast(ubyte) _value["step"].integer;
+              _step = to!ubyte(_value["step"].integer);
             } else if (_value["step"].type() == JSONType.uinteger) {
               assertULongBounds(_value.uinteger, 0, 7);
-              _step = cast(ubyte) _value["step"].uinteger;
+              _step = to!ubyte(_value["step"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
@@ -256,7 +263,7 @@ class DatapointSdk {
             throw Errors.wrong_value_type;
           }
           res.value = DPT3.toUBytes(_dir_step);
-          res.length = cast(ubyte) res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt4:
           char _char;
@@ -264,73 +271,73 @@ class DatapointSdk {
             if (_value.str.length != 1) {
               throw Errors.wrong_value_type;
             }
-            _char = cast(char) _value.str[0];
+            _char = to!char(_value.str[0]);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT4.toUBytes(_char);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt5:
           ubyte _val;
           if (_value.type() == JSONType.integer) {
             assertLongBounds(_value.integer, 0, 255);
-            _val = cast(ubyte) _value.integer;
+            _val = to!ubyte(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
             assertULongBounds(_value.uinteger, 0, 255);
-            _val = cast(ubyte) _value.uinteger;
+            _val = to!ubyte(_value.uinteger);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT5.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt6:
           byte _val;
           if (_value.type() == JSONType.integer) {
             assertULongBounds(_value.integer, -127, 127);
-            _val = cast(byte) _value.integer;
+            _val = to!byte(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
             assertULongBounds(_value.uinteger, -127, 127);
-            _val = cast(byte) _value.uinteger;
+            _val = to!byte(_value.uinteger);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT6.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt7:
           ushort _val;
           if (_value.type() == JSONType.integer) {
             assertLongBounds(_value.integer, 0, 65535);
-            _val = cast(ushort) _value.integer;
+            _val = to!ushort(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
             assertULongBounds(_value.uinteger, 0, 65535);
-            _val = cast(ushort) _value.uinteger;
+            _val = to!ushort(_value.uinteger);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT7.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt8:
           short _val;
           if (_value.type() == JSONType.integer) {
             assertLongBounds(_value.integer, -32768, 32768);
-            _val = cast(short) _value.integer;
+            _val = to!short(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
             assertULongBounds(_value.uinteger, -32768, 32768);
-            _val = cast(short) _value.uinteger;
+            _val = to!short(_value.uinteger);
           }  else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT8.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt9:
           float _val;
@@ -339,19 +346,19 @@ class DatapointSdk {
             _val = _value.floating;
           } else if (_value.type() == JSONType.integer) {
             assertLongBounds(_value.integer, -671088, 650761);
-            _val = cast(float) _value.integer;
+            _val = to!float(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
             assertULongBounds(_value.uinteger, -671088, 650761);
             if (_value.uinteger < -671088.64 || _value.uinteger > 670761.96) {
               throw Errors.wrong_value;
             }
-            _val = cast(float) _value.uinteger;
+            _val = to!float(_value.uinteger);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT9.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt10:
           ubyte _day = 0;
@@ -370,40 +377,40 @@ class DatapointSdk {
             }
             if (_value["day"].type() == JSONType.integer) {
               assertLongBounds(_value["day"].integer, 0, 7);
-              _day = cast(ubyte) _value["day"].integer;
+              _day = to!ubyte(_value["day"].integer);
             } else if (_value["day"].type() == JSONType.uinteger) {
               assertLongBounds(_value["day"].uinteger, 0, 7);
-              _day = cast(ubyte) _value["day"].uinteger;
+              _day = to!ubyte(_value["day"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
 
             if (_value["hour"].type() == JSONType.integer) {
               assertLongBounds(_value["hour"].integer, 0, 23);
-              _hour = cast(ubyte) _value["hour"].integer;
+              _hour = to!ubyte(_value["hour"].integer);
             } else if (_value["hour"].type() == JSONType.uinteger) {
               assertULongBounds(_value["hour"].uinteger, 0, 23);
-              _hour = cast(ubyte) _value["hour"].uinteger;
+              _hour = to!ubyte(_value["hour"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
 
             if (_value["minutes"].type() == JSONType.integer) {
               assertLongBounds(_value["minutes"].integer, 0, 59);
-              _minutes = cast(ubyte) _value["minutes"].integer;
+              _minutes = to!ubyte(_value["minutes"].integer);
             } else if (_value["minutes"].type() == JSONType.uinteger) {
               assertULongBounds(_value["minutes"].uinteger, 0, 59);
-              _minutes = cast(ubyte) _value["minutes"].uinteger;
+              _minutes = to!ubyte(_value["minutes"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
 
             if (_value["seconds"].type() == JSONType.integer) {
               assertLongBounds(_value["seconds"].integer, 0, 59);
-              _seconds = cast(ubyte) _value["seconds"].integer;
+              _seconds = to!ubyte(_value["seconds"].integer);
             } else if (_value["seconds"].type() == JSONType.uinteger) {
               assertULongBounds(_value["seconds"].uinteger, 0, 59);
-              _seconds = cast(ubyte) _value["seconds"].uinteger;
+              _seconds = to!ubyte(_value["seconds"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
@@ -416,7 +423,7 @@ class DatapointSdk {
             throw Errors.wrong_value_type;
           }
           res.value = DPT10.toUBytes(_time);
-          res.length = cast(ubyte) res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt11:
           ushort _day = 0;
@@ -434,30 +441,30 @@ class DatapointSdk {
 
             if (_value["day"].type() == JSONType.integer) {
               assertLongBounds(_value["day"].integer, 1, 31);
-              _day = cast(ushort) _value["day"].integer;
+              _day = to!ushort(_value["day"].integer);
             } else if (_value["day"].type() == JSONType.uinteger) {
               assertULongBounds(_value["day"].uinteger, 1, 31);
-              _day = cast(ushort) _value["day"].uinteger != 0;
+              _day = to!ushort(_value["day"].uinteger != 0);
             } else {
               throw Errors.wrong_value;
             }
 
             if (_value["month"].type() == JSONType.integer) {
               assertLongBounds(_value["month"].integer, 1, 12);
-              _month = cast(ushort) _value["month"].integer;
+              _month = to!ushort(_value["month"].integer);
             } else if (_value["month"].type() == JSONType.uinteger) {
               assertULongBounds(_value["month"].uinteger, 1, 12);
-              _month = cast(ushort) _value["month"].uinteger;
+              _month = to!ushort(_value["month"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
 
             if (_value["year"].type() == JSONType.integer) {
               assertLongBounds(_value["year"].integer, 1990, 2089);
-              _year = cast(ushort) _value["year"].integer;
+              _year = to!ushort(_value["year"].integer);
             } else if (_value["year"].type() == JSONType.uinteger) {
               assertULongBounds(_value["year"].uinteger, 1990, 2089);
-              _year = cast(ushort) _value["year"].uinteger;
+              _year = to!ushort(_value["year"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
@@ -470,46 +477,46 @@ class DatapointSdk {
           }
 
           res.value = DPT11.toUBytes(_date);
-          res.length = cast(ubyte) res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt12:
           uint _val;
           if (_value.type() == JSONType.integer) {
             assertLongBounds(_value.integer, 0, 4294967295);
-            _val = cast(uint) _value.integer;
+            _val = to!uint(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
             assertULongBounds(_value.uinteger, 0, 4294967295);
-            _val = cast(uint) _value.uinteger;
+            _val = to!uint(_value.uinteger);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT12.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt13:
           int _val;
           if (_value.type() == JSONType.integer) {
             assertLongBounds(_value.integer, -2147483648, 2147483647);
-            _val = cast(uint) _value.integer;
+            _val = to!uint(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
             assertULongBounds(_value.uinteger, -2147483648, 2147483647);
-            _val = cast(uint) _value.uinteger;
+            _val = to!uint(_value.uinteger);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT13.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt14:
           float _val;
           if (_value.type() == JSONType.float_) {
             _val = _value.floating;
           } else if (_value.type() == JSONType.integer) {
-            _val = cast(float) _value.integer;
+            _val = to!float(_value.integer);
           } else if (_value.type() == JSONType.uinteger) {
-            _val = cast(float) _value.uinteger;
+            _val = to!float(_value.uinteger);
           } else {
             throw Errors.wrong_value_type;
           }
@@ -517,18 +524,18 @@ class DatapointSdk {
           // what is a range? not in specs.
 
           res.value = DPT14.toUBytes(_val);
-          res.length = cast(ubyte)res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt16:
           char[] _char;
           if (_value.type() == JSONType.string) {
-            _char = cast(char[]) _value.str;
+            _char = to!(char[])(_value.str);
           } else {
             throw Errors.wrong_value_type;
           }
 
           res.value = DPT16.toUBytes(_char);
-          res.length = cast(ubyte) res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         case OS_DatapointType.dpt18:
           ubyte _learn = 1;
@@ -555,9 +562,9 @@ class DatapointSdk {
             }
 
             if (_value["number"].type() == JSONType.integer) {
-              _num = cast(ubyte) _value["step"].integer;
+              _num = to!ubyte(_value["step"].integer);
             } else if (_value["number"].type() == JSONType.uinteger) {
-              _num = cast(ubyte) _value["number"].uinteger;
+              _num = to!ubyte(_value["number"].uinteger);
             } else {
               throw Errors.wrong_value;
             }
@@ -568,7 +575,7 @@ class DatapointSdk {
             throw Errors.wrong_value_type;
           }
           res.value = DPT18.toUBytes(_learn_num);
-          res.length = cast(ubyte) res.value.length;
+          res.length = to!ubyte(res.value.length);
           break;
         default:
           throw Errors.dpt_not_supported;
@@ -596,7 +603,7 @@ class DatapointSdk {
 
       auto count = 0;
       foreach(id; descriptions.keys) {
-        allDatapointId.array[count] = cast(int) descriptions[id].id;
+        allDatapointId.array[count] = JSONValue(id);
         count += 1;
       }
 
@@ -616,9 +623,15 @@ class DatapointSdk {
         res.array[count] = getDescription(id);
         count += 1;
       }
-    } else if (payload.type() == JSONType.integer) {
+    } else if (payload.type() == JSONType.integer ||
+        payload.type() == JSONType.uinteger) {
       // return descr for selected datapoint
-      ushort id = cast(ushort) payload.integer;
+      ushort id;
+      if (payload.type() == JSONType.integer) {
+        id = to!ushort(payload.integer);
+      } else if (payload.type() == JSONType.uinteger) {
+        id = to!ushort(payload.uinteger);
+      }
       if ((id in descriptions) is null) {
         throw Errors.datapoint_not_found;
       }
@@ -642,8 +655,14 @@ class DatapointSdk {
 
   public JSONValue getValue(JSONValue payload) {
     JSONValue res = parseJSON("{}");
-    if (payload.type() == JSONType.integer) {
-      ushort id = cast(ushort) payload.integer;
+    if (payload.type() == JSONType.integer ||
+        payload.type == JSONType.uinteger) {
+      ushort id;
+      if (payload.type() == JSONType.integer) {
+        id = to!ushort(payload.integer);
+      } else if (payload.type() == JSONType.uinteger) {
+        id = to!ushort(payload.uinteger);
+      }
       if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
         throw Errors.datapoint_out_of_bounds;
       }
@@ -654,6 +673,7 @@ class DatapointSdk {
       if (val.service == OS_Services.GetDatapointValueRes && val.success) {
         //assert(val.datapoint_values.length == 1);
         res = convert2JSONValue(val.datapoint_values[0]);
+        values[id] = res;
       } else {
         throw val.error;
       }
@@ -668,10 +688,16 @@ class DatapointSdk {
       }
       foreach(JSONValue jid; payload.array) {
         // assert
-        if(jid.type() != JSONType.integer) {
+        if(jid.type() != JSONType.integer &&
+            jid.type() != JSONType.uinteger) {
           throw Errors.wrong_payload;
         }
-        ushort id = cast(ushort) jid.integer;
+        ushort id;
+        if (jid.type() == JSONType.integer) {
+          id = to!ushort(jid.integer);
+        } else if (jid.type() == JSONType.uinteger) {
+          id = to!ushort(jid.uinteger);
+        }
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
         }
@@ -737,6 +763,7 @@ class DatapointSdk {
         foreach(_val; val.datapoint_values) {
           if ((_val.id in descriptions) != null) {
             res.array[resCount] = convert2JSONValue(_val);
+            values[_val.id] = res.array[resCount];
             resCount += 1;
           }
         }
@@ -755,7 +782,7 @@ class DatapointSdk {
         // moving next
         if (currentLen < maxResLen + 1) {
           if (idUniq[currentIndex] == id) {
-            number = cast(ushort) (id - start);
+            number = to!ushort(id - start);
             if (currentIndex == idUniq.length - 1) {
               number += 1;
               _getValues();
@@ -783,8 +810,7 @@ class DatapointSdk {
       allDatapoints.array.length = descriptions.keys.length;
       auto count = 0;
       foreach(id; descriptions.keys) {
-        // cast to int, so, it is JSONType.integer, not uinteger
-        allDatapoints.array[count] = cast(int) id;
+        allDatapoints.array[count] = JSONValue(id);
         count += 1;
       }
 
@@ -794,6 +820,95 @@ class DatapointSdk {
     }
 
     return res;
+  }
+  public JSONValue getStored(JSONValue payload) {
+    JSONValue res = parseJSON("{}");
+    if (payload.type() == JSONType.integer ||
+        payload.type() == JSONType.uinteger) {
+      ushort id;
+      if (payload.type() == JSONType.integer) {
+        id = to!ushort(payload.integer);
+      } else if (payload.type() == JSONType.uinteger) {
+        id = to!ushort(payload.uinteger);
+      }
+      if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+        throw Errors.datapoint_out_of_bounds;
+      }
+      if((id in descriptions) == null) {
+        throw Errors.datapoint_not_found;
+      }
+      if((id in values) == null) {
+        values[id] = getValue(JSONValue(to!int(id)));
+      }
+      return values[id];
+    } else if (payload.type() == JSONType.array) {
+      // sort array, create new with uniq numbers
+      // then calculate length to cover maximum possible values
+      ushort[] idArray;
+      idArray.length = payload.array.length;
+      auto count = 0;
+      if(payload.array.length == 0) {
+        throw Errors.wrong_payload;
+      }
+      foreach(JSONValue jid; payload.array) {
+        // assert
+        if(jid.type() != JSONType.integer &&
+            jid.type() != JSONType.uinteger) {
+          throw Errors.wrong_payload;
+        }
+        ushort id;
+        if (jid.type() == JSONType.integer) {
+          id = to!ushort(jid.integer);
+        } else if (jid.type() == JSONType.uinteger) {
+          id = to!ushort(jid.uinteger);
+        }
+        if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
+          throw Errors.datapoint_out_of_bounds;
+        }
+        if((id in descriptions) == null) {
+          throw Errors.datapoint_not_found;
+        }
+        idArray[count] = id;
+        count += 1;
+      }
+
+      ushort[] id2get;
+
+      res = parseJSON("[]");
+      foreach(id; idArray) {
+        if((to!ushort(id) in values) == null) {
+          id2get ~= id;
+        } else {
+          res.array ~= values[to!ushort(id)];
+        }
+      }
+      if (id2get.length > 0) {
+        auto getRes = getValue(JSONValue(id2get));
+        foreach(v; getRes.array) {
+          ushort id;
+          if (v["id"].type() == JSONType.integer) {
+            id = to!ushort(v["id"].integer);
+          } else if (v["id"].type() == JSONType.uinteger) {
+            id = to!ushort(v["id"].uinteger);
+          }
+          values[id] = v;
+          res.array ~= v;
+        }
+      }
+      return res;
+    } else if(payload.type() == JSONType.null_) {
+      JSONValue allDatapoints = parseJSON("[]");
+      allDatapoints.array.length = descriptions.keys.length;
+      auto count = 0;
+      foreach(id; descriptions.keys) {
+        allDatapoints.array[count] = JSONValue(to!int(id));
+        count += 1;
+      }
+
+      return getStored(allDatapoints);
+    } else {
+      throw Errors.wrong_payload_type;
+    }
   }
 
   public JSONValue setValue(JSONValue payload,
@@ -806,7 +921,7 @@ class DatapointSdk {
       if(payload["id"].type() != JSONType.integer) {
         throw Errors.wrong_payload;
       }
-      ushort id = cast(ushort) payload["id"].integer;
+      ushort id = to!ushort(payload["id"].integer);
       if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
         throw Errors.datapoint_out_of_bounds;
       }
@@ -820,6 +935,7 @@ class DatapointSdk {
       // for each datapoint add item to response
       if (setValResult.success) {
         res = convert2JSONValue(rawValue);
+        values[id] = res;
         res["success"] = true;
       } else {
         res["id"] = rawValue.id;
@@ -845,7 +961,7 @@ class DatapointSdk {
         if(value["id"].type() != JSONType.integer) {
           throw Errors.wrong_payload_type;
         }
-        ushort id = cast(ushort) value["id"].integer;
+        ushort id = to!ushort(value["id"].integer);
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
         }
@@ -888,6 +1004,7 @@ class DatapointSdk {
           for(auto i = currentIndex - count; i < currentIndex; i += 1) {
             // convert back to JSON value and return
             res.array[resCount] = convert2JSONValue(rawValues[i]);
+            values[rawValues[i].id] = res.array[resCount];
             res.array[resCount]["success"] = true;
             resCount += 1;
           }
@@ -928,8 +1045,14 @@ class DatapointSdk {
   }
   public JSONValue readValue(JSONValue payload) {
     JSONValue res;
-    if (payload.type() == JSONType.integer) {
-      ushort id = cast(ushort) payload.integer;
+    if (payload.type() == JSONType.integer ||
+        payload.type() == JSONType.uinteger) {
+      ushort id;
+      if (payload.type() == JSONType.integer) {
+        id = to!ushort(payload.integer);
+      } else if (payload.type() == JSONType.uinteger) {
+        id = to!ushort(payload.uinteger);
+      }
       if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
         throw Errors.datapoint_out_of_bounds;
       }
@@ -964,10 +1087,16 @@ class DatapointSdk {
       }
       foreach(JSONValue jid; payload.array) {
         // assert
-        if(jid.type() != JSONType.integer) {
+        if(jid.type() != JSONType.integer &&
+            jid.type() != JSONType.uinteger) {
           throw Errors.wrong_payload_type;
         }
-        ushort id = cast(ushort) jid.integer;
+        ushort id; 
+        if (jid.type() == JSONType.integer) {
+          id = to!ushort(jid.integer);
+        } else if (jid.type() == JSONType.uinteger) {
+          id = to!ushort(jid.uinteger);
+        }
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
         }
@@ -1141,6 +1270,7 @@ class DatapointSdk {
         // convert to json type
         try {
           res["payload"].array[count] = convert2JSONValue(dv);
+          values[dv.id] = res["payload"].array[count];
           count++;
         } catch(Exception e) {
           writeln(e);
@@ -1198,7 +1328,6 @@ class DatapointSdk {
   // load datapoints at very start and reset
   public bool init() {
     auto serverItemMessage = baos.GetServerItemReq(14, 1);
-
     // maximum buffer size
     SI_currentBufferSize = 0;
     writeln("Loading server items");
@@ -1226,11 +1355,11 @@ class DatapointSdk {
     // calculate max num of dps in one response
     // GetDatapointDescriptionRes has a header(6b) and 5bytes each dp
     // so, incoming message can contain descr for following num of dpts:
-    ushort number = cast(ushort)(SI_currentBufferSize - 6)/5;
+    ushort number = to!ushort(SI_currentBufferSize - 6)/5;
     ushort start = 1;
     while(start < MAX_DATAPOINT_NUM ) {
       if (MAX_DATAPOINT_NUM - start <= number) {
-        number = cast(ushort) (MAX_DATAPOINT_NUM - start + 1);
+        number = to!ushort(MAX_DATAPOINT_NUM - start + 1);
       }
       auto descr = baos.GetDatapointDescriptionReq(start, number);
       if (descr.success && descr.service == OS_Services.GetDatapointDescriptionRes) {
@@ -1250,6 +1379,7 @@ class DatapointSdk {
       start += number;
     }
     writefln("Datapoints[%d] loaded.", count);
+    values.clear();
 
     return true;
   }
