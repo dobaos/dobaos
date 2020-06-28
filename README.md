@@ -176,6 +176,7 @@ Response:
 | :--- | :--- | :--- |
 | get description | `null/int/Array/string` | Get description for all/one/multiple datapoints. Use `null` or `"*"` string as a payload to get all descriptions. |
 | get value | `null/int/Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
+| get stored | `null/int/Array` | Get stored value for all/one/multiple datapoints. No data will be transfered on serial connection. Payload type same as for "get value" |
 | set value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints. Sends to bus. A `raw` field should be base64 encoded binary data. |
 | put value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints without sending to bus. Store only in BAOS module. A `raw` field should be base64 encoded binary data. |
 | read value | `null/int/Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
