@@ -610,7 +610,8 @@ class DatapointSdk {
       res = getDescription(allDatapointId);
     } else if (payload.type() == JSONType.array) {
       foreach(JSONValue jid; payload.array) {
-        if (jid.type() != JSONType.integer) {
+        if (jid.type() != JSONType.integer &&
+            jid.type() != JSONType.uinteger) {
           throw Errors.wrong_payload;
         }
       }
