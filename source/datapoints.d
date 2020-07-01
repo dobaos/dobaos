@@ -92,7 +92,7 @@ class DPT4 {
     char[] result;
 
     result.length = 1;
-    result[0] = cast(char) raw[0] & 0x7f;
+    result[0] = cast(char) raw[0];
 
     return result;
   }
@@ -336,7 +336,7 @@ class DPT16 {
     result.length = len;
 
     for (auto i = 0; i < len; i+= 1) {
-      result[i] = cast(char) raw[i] & 0x7f;
+      result[i] = cast(char) raw[i];
     }
 
     return result;
