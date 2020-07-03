@@ -95,13 +95,25 @@ class RedisDsm {
   public void processMessages() {
     sub.processMessages();
   }
-  public string[string] getHash(string key) {
+  public string[string] getHash(string key,
+      string[string] default_value, bool set_if_null = false) {
     string[string] result;
     auto kv = redis.send("HGETALL", key);
     if (kv.type == ResponseType.MultiBulk) {
       for (int i = 1; i < kv.values.length; i += 2) {
-        result[kv.values[i-1].toString()] = kv.values[i].toString();
+        string k = kv.values[i-1].toString();
+        string v = kv.values[i].toString();
+        result[k] = v.dup;
       }
+    }
+
+    if (kv.values.length == 0) {
+      if (set_if_null) {
+        foreach(k, v; default_value) {
+          redis.send("HSET", key, k, v);
+        }
+      }
+      return default_value;
     }
 
     return result;

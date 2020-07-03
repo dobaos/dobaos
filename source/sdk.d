@@ -28,15 +28,23 @@ class DatapointSdk {
   private ushort[string] name2id;
   private string[ushort] id2name;
 
-  public void loadDatapointNames(string[string] table) {
+  public bool loadDatapointNames(string[string] table) {
     // input format: table[name] = id; { "datapoint1": 1 }
     name2id.clear();
     id2name.clear();
-    foreach(n; table.keys) {
-      auto id = parse!ushort(table[n]);
-      name2id[n] = id;
-      id2name[id] = n;
+    foreach(k, v; table) {
+      try{ 
+        ushort id = parse!ushort(v);
+        name2id[k] = id;
+        id2name[id] = k;
+      } catch(Exception e) {
+        name2id.clear();
+        id2name.clear();
+        return false;
+      }
     }
+
+    return true;
   }
 
   // stored values

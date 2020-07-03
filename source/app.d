@@ -22,16 +22,16 @@ import redis_dsm;
 import sdk;
 import errors;
 
-enum VERSION = "3_jun_2020";
+enum VERSION = "3_jul_2020";
 
 // struct for commandline params
 private struct Config {
-  @Parameter("dobaos_prefix", 'p')
-    @Description("Prefix for key names(config, streams). Default: dobaos:config:")
+  @Parameter("prefix", 'p')
+    @Description("Prefix for key names(config, streams). Default: 'dobaos:'")
     string dobaos_prefix;
 
   @Parameter("device", 'd')
-    @Description("UART device. Setting this argument will overwrite redis key value. Default: /dev/ttyAMA0")
+    @Description("UART device. Will overwrite redis key value. Default: /dev/ttyAMA0")
     string device;
 }
 
@@ -53,6 +53,10 @@ void main() {
   string stream_ids_cfg;
   int[] stream_ids; 
   string[string] datapoint_names;
+  string[string] default_names;
+  default_names["first"] = "1";
+  default_names["last"] = "1000";
+
   void loadRedisConfig() {
     dobaos_prefix = config.dobaos_prefix.length > 1 ? config.dobaos_prefix: "dobaos:";
     config_prefix = dobaos_prefix ~ "config:";
@@ -76,31 +80,52 @@ void main() {
     // array of datapoints to stream in redis
     stream_ids_cfg = dsm.getKey(config_prefix ~ "stream_datapoints", "[]", true);
     datapoint_names.clear();
-    datapoint_names = dsm.getHash(config_prefix ~ "names");
+    datapoint_names = dsm.getHash(config_prefix ~ "names", default_names, true);
 
+  }
+  void loadStreamDatapoints() {
     stream_ids = [];
+    JSONValue jstream_ids;
     try {
-      auto jstream_ids = parseJSON(stream_ids_cfg);
-      if (jstream_ids.type() != JSONType.array) {
-        writeln("Store datapoint key value is not an array");
+      jstream_ids = parseJSON(stream_ids_cfg); 
+    } catch(Exception e) {
+      writeln("Error in stream_datapoints key. Streams disabled");
+      return;
+    }
+    if (jstream_ids.type() != JSONType.array) {
+      writeln("Key stream_datapoints is not a JSON array");
+      return;
+    }
+    stream_ids.length = jstream_ids.array.length;
+    auto i = 0;
+    foreach(entry; jstream_ids.array) {
+      if (entry.type() != JSONType.integer && 
+          entry.type() != JSONType.uinteger &&
+          entry.type() != JSONType.string) {
+        writeln("Error in stream_ids key value.");
         return;
       }
-      stream_ids.length = jstream_ids.array.length;
-      auto i = 0;
-      foreach(entry; jstream_ids.array) {
-        if (entry.type() != JSONType.integer) {
-          writeln("Datapoint id in stream_ids key value is not an integer");
-          return;
-        }
+      if (entry.type() == JSONType.integer) {
         stream_ids[i] = to!int(entry.integer);
-        i += 1;
+      } else if (entry.type() == JSONType.integer) {
+        stream_ids[i] = to!int(entry.uinteger);
+      } else if (entry.type() == JSONType.string) {
+        if(datapoint_names.keys.canFind(entry.str)) {
+          string v = datapoint_names[entry.str];
+          try {
+            stream_ids[i] = parse!int(v);
+          } catch (Exception e) {
+            // do nothing.
+            // Datapoint names will be disabled later
+            stream_ids.length = stream_ids.length - 1;
+            continue;
+          }
+        } else {
+          stream_ids.length = stream_ids.length - 1;
+          continue;
+        }
       }
-    } catch(Exception e) {
-      writeln(e);
-      return;
-    } catch(Error e) {
-      writeln(e);
-      return;
+      i += 1;
     }
   }
   void addToStream(JSONValue _jvalue) {
@@ -125,7 +150,14 @@ void main() {
   sw.start();
 
   auto sdk = new DatapointSdk(device, params);
-  sdk.loadDatapointNames(datapoint_names);
+
+  // load datapoint names to sdk. if error, then disable feature
+  if (!sdk.loadDatapointNames(datapoint_names)) {
+    writeln("Error parsing datapoint names table");
+    writeln("Datapoint names are disabled");
+    datapoint_names.clear();
+  }
+  loadStreamDatapoints();
 
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     JSONValue res;
@@ -374,7 +406,12 @@ void main() {
           writeln("==== Reset request received ====");
           while (true) {
             loadRedisConfig();
-            sdk.loadDatapointNames(datapoint_names);
+            if (!sdk.loadDatapointNames(datapoint_names)) {
+              writeln("Error parsing datapoint names table");
+              writeln("Datapoint names are disabled");
+              datapoint_names.clear();
+            }
+            loadStreamDatapoints();
             dsm.unsubscribe();
             dsm.setChannels(req_channel, cast_channel);
             dsm.subscribe(toDelegate(&handleRequest));
@@ -404,7 +441,12 @@ void main() {
   while(true) {
     if (!sdk.resetBaos(device, params)) {
       loadRedisConfig();
-      sdk.loadDatapointNames(datapoint_names);
+      if (!sdk.loadDatapointNames(datapoint_names)) {
+        writeln("Error parsing datapoint names table");
+        writeln("Datapoint names are disabled");
+        datapoint_names.clear();
+      }
+      loadStreamDatapoints();
       dsm.unsubscribe();
       dsm.setChannels(req_channel, cast_channel);
       dsm.subscribe(toDelegate(&handleRequest));

@@ -52,29 +52,35 @@ sudo cp ./dobaos /usr/local/bin/dobaos
 
 so, now you are able to run it with just `dobaos` command.
 
-Since version 10\_mar\_2020 default device is /dev/ttyAMA0 and all config now is stored at redis database. At a first run, dobaos service creates all needed keys there. Default config prefix is `dobaos_config_`. It can be changed with command line argument `--config_prefix`/`-c`.
+Since version 10\_mar\_2020 default device is /dev/ttyAMA0 and all config now is stored at redis database. At a first run, dobaos service creates all needed keys there. Default config prefix is `dobaos:`. It can be changed with command line argument `--prefix`/`-p`.
 
 To see created keys:
 
 ```text
-$ redis-cli keys dobaos_config_*
-1) "dobaos_config_uart_params"
-2) "dobaos_config_scast_channel"
-3) "dobaos_config_req_channel"
-4) "dobaos_config_store_ids"
-5) "dobaos_config_stream_maxlen"
-6) "dobaos_config_stream_prefix"
-7) "dobaos_config_bcast_channel"
-8) "dobaos_config_uart_device"
+$ redis-cli keys dobaos:*
+1) "dobaos:config:bcast_channel"
+2) "dobaos:config:stream_maxlen"
+3) "dobaos:config:stream_raw"
+4) "dobaos:config:stream_datapoints"
+5) "dobaos:config:uart_params"
+6) "dobaos:config:uart_device"
+7) "dobaos:config:req_channel"
 ```
 
 To get or change config key value `redis-cli get` and `redis-cli set` command may be executed.
 
-Running dobaos with `--device`/`-d` argument will overwrite `dobaos_config_uart_device` value.
+You may install redis-commander package as well for simple web interface.
 
 ```text
-redis-cli get dobaos_config_uart_device
-redis-cli set dobaos_config_uart_device /dev/ttyS1
+$ sudo npm i -g redis-commander
+$ redis-commander
+```
+
+Running dobaos with `--device`/`-d` argument will overwrite `dobaos:config:uart_device` value.
+
+```text
+redis-cli get dobaos:config:uart_device
+redis-cli set dobaos:config:uart_device /dev/ttyS1
 ```
 
 ## Create systemd service
@@ -145,7 +151,7 @@ On redis message: parse JSON, send request to UART, then respond.
 
 ## Protocol
 
-JSON messages should be sent to pub/sub channel, "dobaos_req" by default.
+JSON messages should be sent to pub/sub channel, "dobaos\_req" by default.
 
 ```text
 {
@@ -157,8 +163,8 @@ JSON messages should be sent to pub/sub channel, "dobaos_req" by default.
 
 This three fields are required. If one of them is not found in message, request will be declined.
 
-Response is sent to "response_channel", therefore, client should be subscribed, before sending request.
-Good practice is to select channel prefix name, e.g. `client_listener_ch` and use Redis command `PSUBSCRIBE client_listener_ch_*`. Generate random number, add to that prefix and send as a response_channel value.
+Response is sent to "response\_channel", therefore, client should be subscribed, before sending request.
+Good practice is to select channel prefix name, e.g. `client_listener_ch` and use Redis command `PSUBSCRIBE client_listener_ch_*`. Generate random number, add to that prefix and send as a response\_channel value.
 
 Response: 
 
@@ -175,11 +181,11 @@ Response:
 | method | payload | Description |
 | :--- | :--- | :--- |
 | get description | `null/int/Array/string` | Get description for all/one/multiple datapoints. Use `null` or `"*"` string as a payload to get all descriptions. |
-| get value | `null/int/Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
-| get stored | `null/int/Array` | Get stored value for all/one/multiple datapoints. No data will be transfered on serial connection. Payload type same as for "get value" |
-| set value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints. Sends to bus. A `raw` field should be base64 encoded binary data. |
+| get value | `null/int/string/Array` | Get value for all/one/multiple datapoints. Use `null` to get all values. Returns object or array of them. Object format: `{id: xx, value: xx, raw: xx}`. |
+| get stored | `null/int/string/Array` | Get stored value for all/one/multiple datapoints. No data will be transfered on serial connection. Payload type same as for "get value" |
+| set value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints. Sends to bus. A `raw` field should be base64 encoded binary data; `id` may be int or string(for datapoint names). |
 | put value | `{id: xx, value: xx}/{id: xx, raw: xx}/Array` | Set value for one/multiple datapoints without sending to bus. Store only in BAOS module. A `raw` field should be base64 encoded binary data. |
-| read value | `null/int/Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
+| read value | `null/int/string/Array` | Send read request for all/one/multiple datapoints. Keep in mind that datapoint should have UPDATE flag. |
 | get programming mode | any | Returns `true` or `false` depending on programming mode state. |
 | set programming mode | `0/1/false/true` | Set device programming mode value. As if you pressed physical button. |
 | get server items | any | Get server items 1-17. |
@@ -202,13 +208,54 @@ Also, on server item change(e.g. programming mode button or bus connect/disconne
 
 Since version 10\_mar\_2020, there is support for Redis streams(redis v5.0.0 at least required).
 
-Streaming is customizable by changing keys `dobaos_config_stream_*` (default dobaos prefix).
+Streaming is customizable by changing keys `dobaos:config:stream_*`.
 
 Maxlen parameter is a maximum amount of one datapoint record.
 
-Stream\_ids is an json serialized array, default is `[]`. Put your datapoints there: `[1, 2, 3, 5, 10]`.
+Key `stream_datapoints` is a json serialized array, default is `[]`. Put your datapoints there: `[1, 2, 3, 5, 10]`. You may add datapoint names in this array as well: `[1, 2, 3, "room_temperature"]`.
 
-And prefix is used for naming. Default is `dobaos_datapoint_`, stream names will be `dobaos_datapoint_1`, `dobaos_datapoint_2`, etc.
+Parameter `stream_raw` indicates if dobaos should save base64-encoded values. By default it's false to save memory.
+
+## Datapoint names
+
+Added support for datapoint names in version 3\_jul\_2020. To assign a name, edit a redis hash table `dobaos:config:names`. Format: table[name] = id. 
+
+Example of command for redis-cli:
+
+```text
+HSET dobaos:config:names room_temperature 123
+```
+
+Reload application or send reset request after mading changes to hash table. From now on you can work with string identifiers.
+
+```text
+{
+  "method": "get description",
+  "payload": "room_temperature"
+}
+```
+
+```text
+{
+  "method": "get description",
+  "payload": [1, "room_temperature"]
+}
+```
+
+Same format applies to `get stored/get value/read value`.
+In `set value` payload `id` field may be replaced by name value as well. 
+
+```text
+{
+  "method": "set value",
+  "payload": {
+    "id": "room_temperature",
+    "value": 21
+  }
+}
+```
+
+Note: datapoint names may be received by reading redis hash table keys and values and by `get description` request.
 
 ## Datapoint value formats
 
@@ -217,7 +264,7 @@ And prefix is used for naming. Default is `dobaos_datapoint_`, stream names will
 | DPT1 | `true/false` | `0/1/false/true` |
 | DPT2 | `{ control: false/true, value: false/true }`| `{ control: 0/1/false/true, value: 0/1/false/true }` |
 | DPT3 | `{ direction: 0/1, step: int in range 0..7 }` | `{ direction: 0/1, step: int in range 0..7 }` |
-| DPT4 | ASCII char | ASCII char |
+| DPT4 | Char in range `0..255` | Char in range `0..255` |
 | DPT5 | int in range `0..255` | int in range `0..255` |
 | DPT6 | int in range `-127..127` | int in range `-127..127` |
 | DPT7 | int in range `0..65535` | int in range `0..65535` |
@@ -234,6 +281,7 @@ And prefix is used for naming. Default is `dobaos_datapoint_`, stream names will
 ## Client libraries
 
 * [dobaos.js](https://github.com/dobaos/dobaos.js)
+* [dobaos.py](https://github.com/dobaos/dobaos.py)
 * [dobaos.d](https://github.com/dobaos/dobaos.d)
 
 
