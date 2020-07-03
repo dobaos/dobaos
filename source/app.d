@@ -26,9 +26,9 @@ enum VERSION = "26_jun_2020";
 
 // struct for commandline params
 private struct Config {
-  @Parameter("config_prefix", 'c')
-    @Description("Prefix for config key names. dobaos_config_uart_device, etc.. Default: dobaos_config_")
-    string config_prefix;
+  @Parameter("dobaos_prefix", 'p')
+    @Description("Prefix for key names(config, streams). Default: dobaos:config:")
+    string dobaos_prefix;
 
   @Parameter("device", 'd')
     @Description("UART device. Setting this argument will overwrite redis key value. Default: /dev/ttyAMA0")
@@ -41,7 +41,9 @@ void main() {
   auto dsm = new RedisDsm("127.0.0.1", cast(ushort)6379);
   // parse args
   auto config = parseArguments!Config();
-  string config_prefix = config.config_prefix.length > 1 ? config.config_prefix: "dobaos_config_";
+  string dobaos_prefix = config.dobaos_prefix.length > 1 ? config.dobaos_prefix: "dobaos:";
+  string config_prefix = dobaos_prefix ~ "config:";
+  string stream_prefix = dobaos_prefix ~ "stream:";
 
   auto device = dsm.getKey(config_prefix ~ "uart_device", "/dev/ttyAMA0", true);
   // if device parameter was given in commandline arguments
@@ -55,11 +57,12 @@ void main() {
   auto cast_channel = dsm.getKey(config_prefix ~ "bcast_channel", "dobaos_cast", true);
   dsm.setChannels(req_channel, cast_channel);
 
-  auto stream_prefix = dsm.getKey(config_prefix ~ "stream_prefix", "dobaos_datapoint_", true);
   auto stream_maxlen = dsm.getKey(config_prefix ~ "stream_maxlen", "1000", true);
+  auto stream_raw = (dsm.getKey(config_prefix ~ "stream_raw", "false", true)) == "true";
 
   // array of datapoints to stream in redis
-  auto stream_ids_cfg = dsm.getKey(config_prefix ~ "stream_ids", "[]", true);
+  auto stream_ids_cfg = dsm.getKey(config_prefix ~ "stream_datapoints", "[]", true);
+  auto datapoint_names = dsm.getHash(config_prefix ~ "names");
 
   int[] stream_ids; 
   try {
@@ -85,12 +88,27 @@ void main() {
     writeln(e);
     return;
   }
-
+  void addToStream(JSONValue _jvalue) {
+    int id = to!int(_jvalue["id"].integer);
+    // add only if this datapoint is selected
+    if (stream_ids.canFind(id)) {
+      if (_jvalue["value"].type() == JSONType.float_) {
+        _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
+      }
+      string[string] entry;
+      entry["value"] = _jvalue["value"].toJSON();
+      if (stream_raw) {
+        entry["raw"] = _jvalue["raw"].toJSON();
+      }
+      dsm.addToStream(stream_prefix ~ to!string(id), stream_maxlen, entry);
+    }
+  }
 
   StopWatch sw;
   sw.start();
 
   auto sdk = new DatapointSdk(device, params);
+  sdk.loadDatapointNames(datapoint_names);
 
   void handleRequest(JSONValue jreq, void delegate(JSONValue) sendResponse) {
     JSONValue res;
@@ -156,8 +174,7 @@ void main() {
           if (res["payload"].type() == JSONType.array) {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
-            auto jstream = parseJSON("[]");
-            auto count = 0; auto stream_count = 0;
+            auto count = 0;
             foreach(value; res["payload"].array) {
               if (value["success"].type() == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
@@ -177,21 +194,11 @@ void main() {
                 } else if (value["id"].type() == JSONType.uinteger) {
                   id = to!int(value["id"].uinteger);
                 }
-
-                if (stream_ids.canFind(id)) {
-                  if (_jvalue["value"].type() == JSONType.float_) {
-                    _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
-                  }
-                  jstream.array ~= _jvalue;
-                  stream_count += 1;
-                }
+                addToStream(value);
               }
             }
             if (count > 0) {
               dsm.broadcast(jcast);
-            }
-            if (stream_count > 0) {
-              dsm.addToStream(stream_prefix, stream_maxlen, jstream);
             }
           } else if (res["payload"].type() == JSONType.object) {
             auto value = res["payload"];
@@ -214,12 +221,7 @@ void main() {
               } else if (value["id"].type() == JSONType.uinteger) {
                 id = to!int(value["id"].uinteger);
               }
-              if (stream_ids.canFind(id)) {
-                if (_jvalue["value"].type() == JSONType.float_) {
-                  _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
-                }
-                dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
-              }
+              addToStream(value);
             }
           }
         } catch(Exception e) {
@@ -239,8 +241,7 @@ void main() {
           if (res["payload"].type() == JSONType.array) {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
-            auto jstream = parseJSON("[]");
-            auto count = 0; auto stream_count = 0;
+            auto count = 0; 
             foreach(value; res["payload"].array) {
               if (value["success"].type() == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
@@ -260,20 +261,11 @@ void main() {
                 } else if (value["id"].type() == JSONType.uinteger) {
                   id = to!int(value["id"].uinteger);
                 }
-                if (stream_ids.canFind(id)) {
-                  if (_jvalue["value"].type() == JSONType.float_) {
-                    _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
-                  }
-                  jstream.array ~= _jvalue;
-                  stream_count += 1;
-                }
+                addToStream(value);
               }
             }
             if (count > 0) {
               dsm.broadcast(jcast);
-            }
-            if (stream_count > 0) {
-              dsm.addToStream(stream_prefix, stream_maxlen, jstream);
             }
           } else if (res["payload"].type() == JSONType.object) {
             auto value = res["payload"];
@@ -295,12 +287,7 @@ void main() {
               } else if (value["id"].type() == JSONType.uinteger) {
                 id = to!int(value["id"].uinteger);
               }
-              if (stream_ids.canFind(id)) {
-                if (_jvalue["value"].type() == JSONType.float_) {
-                  _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
-                }
-                dsm.addToStream(stream_prefix, stream_maxlen, _jvalue);
-              }
+              addToStream(value);
             }
           }
         } catch(Exception e) {
@@ -410,8 +397,6 @@ void main() {
       // now, if we got datapoint value that should be saved
       if (ind["method"].str == "datapoint value" && stream_ids.length > 0) {
         if (ind["payload"].type == JSONType.array) {
-          auto jstream = parseJSON("[]");
-          auto stream_count = 0;
           foreach(value; ind["payload"].array) {
             int id;
             if (value["id"].type() == JSONType.integer) {
@@ -419,16 +404,7 @@ void main() {
             } else if (value["id"].type() == JSONType.uinteger) {
               id = to!int(value["id"].uinteger);
             }
-            if (stream_ids.canFind(id)) {
-              if (value["value"].type() == JSONType.float_) {
-                value["value"] = format!"%0.2f"(value["value"].floating);
-              }
-              jstream.array ~= value;
-              stream_count += 1;
-            }
-          }
-          if (stream_count > 0) {
-            dsm.addToStream(stream_prefix, stream_maxlen, jstream);
+            addToStream(value);
           }
         } else if (ind["payload"].type == JSONType.object) {
           int id;
@@ -438,12 +414,7 @@ void main() {
           } else if (value["id"].type() == JSONType.uinteger) {
             id = to!int(value["id"].uinteger);
           }
-          if (stream_ids.canFind(ind["payload"]["id"].integer)) {
-              if (ind["payload"]["value"].type() == JSONType.float_) {
-                ind["payload"]["value"] = format!"%0.2f"(ind["payload"]["value"].floating);
-              }
-            dsm.addToStream(stream_prefix, stream_maxlen, ind["payload"]);
-          }
+          addToStream(value);
         }
       }
     }

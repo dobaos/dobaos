@@ -89,6 +89,17 @@ class RedisDsm {
   public void processMessages() {
     sub.processMessages();
   }
+  public string[string] getHash(string key) {
+    string[string] result;
+    auto kv = redis.send("HGETALL", key);
+    if (kv.type == ResponseType.MultiBulk) {
+      for (int i = 1; i < kv.values.length; i += 2) {
+        result[kv.values[i-1].toString()] = kv.values[i].toString();
+      }
+    }
+
+    return result;
+  }
   public string getKey(string key) {
     return redis.send("GET " ~ key).toString();
   }
@@ -107,21 +118,15 @@ class RedisDsm {
   public string setKey(string key, string value) {
     return redis.send("SET " ~ key ~ " " ~ value).toString();
   }
-  public void addToStream(string key_prefix, string maxlen, JSONValue data) {
-    if (data.type() == JSONType.array) {
-      foreach(entry; data.array) {
-        addToStream(key_prefix, maxlen, entry);
-      }
-      return;
-    } else if (data.type() == JSONType.object) {
-      auto command = "XADD ";
-      command ~= key_prefix ~ data["id"].toJSON() ~ " ";
-      command ~= "MAXLEN ~ " ~ to!string(maxlen) ~ " ";
-      command ~= "* "; // id
-      command ~= "id " ~ data["id"].toJSON() ~ " ";
-      command ~= "value " ~ data["value"].toJSON() ~ " ";
-      command ~= "raw " ~ data["raw"].toJSON() ~ " ";
-      redis.send(command);
+  public void addToStream(string key_prefix, string maxlen, string[string] data) {
+    auto command = "XADD ";
+    command ~= key_prefix ~ " ";
+    command ~= "MAXLEN ~ " ~ to!string(maxlen) ~ " ";
+    command ~= "* "; // id
+    foreach(k, v; data) {
+      command ~= k ~ " ";
+      command ~= v;
     }
+    redis.send(command);
   }
 }

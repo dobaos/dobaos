@@ -25,6 +25,20 @@ const ushort MAX_DATAPOINT_NUM = 1000;
 class DatapointSdk {
   private ushort SI_currentBufferSize;
   private OS_DatapointDescription[ushort] descriptions;
+  private ushort[string] name2id;
+  private string[ushort] id2name;
+
+  public void loadDatapointNames(string[string] table) {
+    // input format: table[name] = id; { "datapoint1": 1 }
+    name2id.clear();
+    id2name.clear();
+    // TODO: table keys for each: n = k, id = parse(table[k])
+    foreach(n; table.keys) {
+      auto id = parse!ushort(table[n]);
+      name2id[n] = id;
+      id2name[id] = n;
+    }
+  }
 
   // stored values
   private JSONValue[ushort] values;
@@ -590,28 +604,33 @@ class DatapointSdk {
 
   public JSONValue getDescription(JSONValue payload) {
     JSONValue res;
-    if(payload.type() == JSONType.null_ || 
-        payload.type() == JSONType.string) {
-      if (payload.type() == JSONType.string) {
-        if (payload.str != "*") {
-          throw Errors.wrong_payload;
-        }
-      }
+    if (payload.type() == JSONType.null_) {
+      return getDescription(JSONValue("*"));
+    } else if(payload.type() == JSONType.string) {
       // return all descriptions
-      JSONValue allDatapointId = parseJSON("[]");
-      allDatapointId.array.length = descriptions.keys.length;
+      if (payload.str == "*") {
+        JSONValue allDatapointId = parseJSON("[]");
+        allDatapointId.array.length = descriptions.keys.length;
 
-      auto count = 0;
-      foreach(id; descriptions.keys) {
-        allDatapointId.array[count] = JSONValue(id);
-        count += 1;
+        auto count = 0;
+        foreach(id; descriptions.keys) {
+          allDatapointId.array[count] = JSONValue(id);
+          count += 1;
+        }
+
+        res = getDescription(allDatapointId);
+      } else {
+        if ((payload.str in name2id) is null) {
+          throw Errors.datapoint_not_found;
+        }
+        ushort id = name2id[payload.str];
+        return getDescription(JSONValue(id));
       }
-
-      res = getDescription(allDatapointId);
     } else if (payload.type() == JSONType.array) {
       foreach(JSONValue jid; payload.array) {
         if (jid.type() != JSONType.integer &&
-            jid.type() != JSONType.uinteger) {
+            jid.type() != JSONType.uinteger &&
+            jid.type() != JSONType.string) {
           throw Errors.wrong_payload;
         }
       }
@@ -638,6 +657,9 @@ class DatapointSdk {
       }
 
       auto descr = descriptions[id];
+      if ((id in id2name) !is null) {
+        res["name"] = id2name[id];
+      }
       res["id"] = descr.id;
       res["type"] = descr.type;
       res["priority"] = descr.flags.priority;
