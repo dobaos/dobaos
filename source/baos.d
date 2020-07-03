@@ -197,12 +197,13 @@ class Baos {
     return commonRequest(OS_Protocol.SetServerItemReq(items));
   }
 
-  public void reset() {
+  public bool reset() {
     // send reset request
     FT12Frame resetFrame;
     resetFrame.type = FT12FrameType.resetReq;
     ubyte[] resetReqBuffer = ft12.compose(resetFrame);
 
+    writeln("Sending reset request");
     com.write(resetReqBuffer);
 
     // init var
@@ -210,26 +211,41 @@ class Baos {
     _resetAckReceived = false;
 
     // reset timeout watcher
+    _timeout = false;
     sw.reset();
+    sw.start();
+
+    int attempts = 0;
+    int max = 5;
     // and wait until acknowledge is received
-    while(!(_resetAckReceived || _resetInd || _timeout)) {
+    while(!(_resetAckReceived || _resetInd ||
+          _timeout || attempts > max)) {
       processIncomingData();
       processResponseTimeout();
       if (_timeout) {
-        writeln("ERR_TIMEOUT");
+        writeln(".....timeout");
+        attempts += 1;
         _timeout = false;
         sw.reset();
         sw.start();
         // repeat
-        reset();
+        com.write(resetReqBuffer);
+      }
+      if (attempts > max) {
+        return false;
       }
       Thread.sleep(2.msecs);
     }
-  }
-  public void switch2BAOS() {
+
     writeln("Switching to BAOS mode.");
     ubyte[] switchFrame = [0xf6, 0x00, 0x08, 0x01, 0x34, 0x10, 0x01, 0xf0];
     commonRequest(switchFrame);
+
+    return true;
+  }
+  public bool reset(string device, string params) {
+    com.reopen(device, SPConfig.parse(params));
+    return reset();
   }
 
   // constructor

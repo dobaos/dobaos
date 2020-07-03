@@ -50,8 +50,14 @@ class RedisDsm {
     this.bcast_channel = bcast_channel;
   }
 
+
+  public void unsubscribe() {
+    if (req_channel.length > 0) {
+      writeln("Unsubscribing from ", req_channel);
+      sub.unsubscribe(req_channel);
+    }
+  }
   public void subscribe(void delegate(JSONValue, void delegate(JSONValue)) req_handler) {
-    // TODO: service_handler
     // init publisher
     pub = new Redis(redis_host, redis_port);
     // delegate for incoming messages

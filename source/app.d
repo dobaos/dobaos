@@ -22,7 +22,7 @@ import redis_dsm;
 import sdk;
 import errors;
 
-enum VERSION = "26_jun_2020";
+enum VERSION = "3_jun_2020";
 
 // struct for commandline params
 private struct Config {
@@ -41,52 +41,67 @@ void main() {
   auto dsm = new RedisDsm("127.0.0.1", cast(ushort)6379);
   // parse args
   auto config = parseArguments!Config();
-  string dobaos_prefix = config.dobaos_prefix.length > 1 ? config.dobaos_prefix: "dobaos:";
-  string config_prefix = dobaos_prefix ~ "config:";
-  string stream_prefix = dobaos_prefix ~ "stream:";
-
-  auto device = dsm.getKey(config_prefix ~ "uart_device", "/dev/ttyAMA0", true);
-  // if device parameter was given in commandline arguments
-  if (config.device.length > 1) {
-    device = config.device;
-    dsm.setKey(config_prefix ~ "uart_device", device);
-  }
-  auto params = dsm.getKey(config_prefix ~ "uart_params", "19200:8E1", true);
-
-  auto req_channel = dsm.getKey(config_prefix ~ "req_channel", "dobaos_req", true);
-  auto cast_channel = dsm.getKey(config_prefix ~ "bcast_channel", "dobaos_cast", true);
-  dsm.setChannels(req_channel, cast_channel);
-
-  auto stream_maxlen = dsm.getKey(config_prefix ~ "stream_maxlen", "1000", true);
-  auto stream_raw = (dsm.getKey(config_prefix ~ "stream_raw", "false", true)) == "true";
-
-  // array of datapoints to stream in redis
-  auto stream_ids_cfg = dsm.getKey(config_prefix ~ "stream_datapoints", "[]", true);
-  auto datapoint_names = dsm.getHash(config_prefix ~ "names");
-
+  string dobaos_prefix;
+  string config_prefix; 
+  string stream_prefix;
+  string device;
+  string params;
+  string req_channel;
+  string cast_channel;
+  string stream_maxlen;
+  bool stream_raw;
+  string stream_ids_cfg;
   int[] stream_ids; 
-  try {
-    auto jstream_ids = parseJSON(stream_ids_cfg);
-    if (jstream_ids.type() != JSONType.array) {
-      writeln("Store datapoint key value is not an array");
-      return;
+  string[string] datapoint_names;
+  void loadRedisConfig() {
+    dobaos_prefix = config.dobaos_prefix.length > 1 ? config.dobaos_prefix: "dobaos:";
+    config_prefix = dobaos_prefix ~ "config:";
+    stream_prefix = dobaos_prefix ~ "stream:";
+
+    device = dsm.getKey(config_prefix ~ "uart_device", "/dev/ttyAMA0", true);
+    // if device parameter was given in commandline arguments
+    if (config.device.length > 1) {
+      device = config.device;
+      dsm.setKey(config_prefix ~ "uart_device", device);
     }
-    stream_ids.length = jstream_ids.array.length;
-    auto i = 0;
-    foreach(entry; jstream_ids.array) {
-      if (entry.type() != JSONType.integer) {
-        writeln("Datapoint id in stream_ids key value is not an integer");
+    params = dsm.getKey(config_prefix ~ "uart_params", "19200:8E1", true);
+
+    req_channel = dsm.getKey(config_prefix ~ "req_channel", "dobaos_req", true);
+    cast_channel = dsm.getKey(config_prefix ~ "bcast_channel", "dobaos_cast", true);
+    dsm.setChannels(req_channel, cast_channel);
+
+    stream_maxlen = dsm.getKey(config_prefix ~ "stream_maxlen", "1000", true);
+    stream_raw = (dsm.getKey(config_prefix ~ "stream_raw", "false", true)) == "true";
+
+    // array of datapoints to stream in redis
+    stream_ids_cfg = dsm.getKey(config_prefix ~ "stream_datapoints", "[]", true);
+    datapoint_names.clear();
+    datapoint_names = dsm.getHash(config_prefix ~ "names");
+
+    stream_ids = [];
+    try {
+      auto jstream_ids = parseJSON(stream_ids_cfg);
+      if (jstream_ids.type() != JSONType.array) {
+        writeln("Store datapoint key value is not an array");
         return;
       }
-      stream_ids[i] = to!int(entry.integer);
-      i += 1;
+      stream_ids.length = jstream_ids.array.length;
+      auto i = 0;
+      foreach(entry; jstream_ids.array) {
+        if (entry.type() != JSONType.integer) {
+          writeln("Datapoint id in stream_ids key value is not an integer");
+          return;
+        }
+        stream_ids[i] = to!int(entry.integer);
+        i += 1;
+      }
+    } catch(Exception e) {
+      writeln(e);
+      return;
+    } catch(Error e) {
+      writeln(e);
+      return;
     }
-  } catch(Exception e) {
-    writeln(e);
-    return;
-  } catch(Error e) {
-    writeln(e);
-    return;
   }
   void addToStream(JSONValue _jvalue) {
     int id = to!int(_jvalue["id"].integer);
@@ -103,6 +118,8 @@ void main() {
       dsm.addToStream(stream_prefix ~ to!string(id), stream_maxlen, entry);
     }
   }
+
+  loadRedisConfig();
 
   StopWatch sw;
   sw.start();
@@ -353,11 +370,16 @@ void main() {
         break;
       case "reset":
         try {
+          print_logo();
           writeln("==== Reset request received ====");
-          sdk.resetBaos();
-          bool initialized = false;
-          while(!initialized) {
-            initialized = sdk.init();
+          while (true) {
+            loadRedisConfig();
+            sdk.loadDatapointNames(datapoint_names);
+            dsm.unsubscribe();
+            dsm.setChannels(req_channel, cast_channel);
+            dsm.subscribe(toDelegate(&handleRequest));
+            if (!sdk.resetBaos(device, params)) continue;
+            if (sdk.init()) break;
           }
           res["method"] = "success";
           res["payload"] = true;
@@ -379,8 +401,17 @@ void main() {
 
   writeln("IPC ready");
 
-  sdk.resetBaos();
-  sdk.init();
+  while(true) {
+    if (!sdk.resetBaos(device, params)) {
+      loadRedisConfig();
+      sdk.loadDatapointNames(datapoint_names);
+      dsm.unsubscribe();
+      dsm.setChannels(req_channel, cast_channel);
+      dsm.subscribe(toDelegate(&handleRequest));
+      continue;
+    }
+    if (sdk.init()) break;
+  }
 
   writeln("SDK ready");
   writefln("Started in %dms", sw.peek.total!"msecs");

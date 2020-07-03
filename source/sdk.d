@@ -32,7 +32,6 @@ class DatapointSdk {
     // input format: table[name] = id; { "datapoint1": 1 }
     name2id.clear();
     id2name.clear();
-    // TODO: table keys for each: n = k, id = parse(table[k])
     foreach(n; table.keys) {
       auto id = parse!ushort(table[n]);
       name2id[n] = id;
@@ -123,7 +122,7 @@ class DatapointSdk {
       throw Errors.wrong_payload;
     }
     if (value["id"].type() != JSONType.integer && 
-          value["id"].type() != JSONType.uinteger) {
+        value["id"].type() != JSONType.uinteger) {
       throw Errors.wrong_payload_type;
     }
 
@@ -602,6 +601,22 @@ class DatapointSdk {
 
   private Baos baos;
 
+  private ushort getIdFromJson(JSONValue payload) {
+    ushort id;
+    if (payload.type() == JSONType.integer) {
+      id = to!ushort(payload.integer);
+    } else if (payload.type() == JSONType.uinteger) {
+      id = to!ushort(payload.uinteger);
+    } else if (payload.type() == JSONType.string) {
+      if ((payload.str in name2id) is null) {
+        throw Errors.datapoint_not_found;
+      }
+      id = name2id[payload.str];
+    }
+
+    return id;
+  }
+
   public JSONValue getDescription(JSONValue payload) {
     JSONValue res;
     if (payload.type() == JSONType.null_) {
@@ -646,12 +661,7 @@ class DatapointSdk {
     } else if (payload.type() == JSONType.integer ||
         payload.type() == JSONType.uinteger) {
       // return descr for selected datapoint
-      ushort id;
-      if (payload.type() == JSONType.integer) {
-        id = to!ushort(payload.integer);
-      } else if (payload.type() == JSONType.uinteger) {
-        id = to!ushort(payload.uinteger);
-      }
+      ushort id = getIdFromJson(payload);
       if ((id in descriptions) is null) {
         throw Errors.datapoint_not_found;
       }
@@ -679,13 +689,16 @@ class DatapointSdk {
   public JSONValue getValue(JSONValue payload) {
     JSONValue res = parseJSON("{}");
     if (payload.type() == JSONType.integer ||
-        payload.type == JSONType.uinteger) {
-      ushort id;
-      if (payload.type() == JSONType.integer) {
-        id = to!ushort(payload.integer);
-      } else if (payload.type() == JSONType.uinteger) {
-        id = to!ushort(payload.uinteger);
+        payload.type() == JSONType.uinteger ||
+        payload.type() == JSONType.string) {
+      if (payload.type() == JSONType.string) {
+        if (payload.str == "*") {
+          return getValue(JSONValue(null));
+        }
       }
+
+      ushort id = getIdFromJson(payload);
+
       if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
         throw Errors.datapoint_out_of_bounds;
       }
@@ -712,15 +725,11 @@ class DatapointSdk {
       foreach(JSONValue jid; payload.array) {
         // assert
         if(jid.type() != JSONType.integer &&
-            jid.type() != JSONType.uinteger) {
+            jid.type() != JSONType.uinteger &&
+            jid.type() != JSONType.string) {
           throw Errors.wrong_payload;
         }
-        ushort id;
-        if (jid.type() == JSONType.integer) {
-          id = to!ushort(jid.integer);
-        } else if (jid.type() == JSONType.uinteger) {
-          id = to!ushort(jid.uinteger);
-        }
+        ushort id = getIdFromJson(jid);
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
         }
@@ -849,13 +858,16 @@ class DatapointSdk {
   public JSONValue getStored(JSONValue payload) {
     JSONValue res = parseJSON("{}");
     if (payload.type() == JSONType.integer ||
-        payload.type() == JSONType.uinteger) {
-      ushort id;
-      if (payload.type() == JSONType.integer) {
-        id = to!ushort(payload.integer);
-      } else if (payload.type() == JSONType.uinteger) {
-        id = to!ushort(payload.uinteger);
+        payload.type() == JSONType.uinteger ||
+        payload.type() == JSONType.string) {
+
+      if (payload.type() == JSONType.string) {
+        if (payload.str == "*") {
+          return getStored(JSONValue(null));
+        }
       }
+      ushort id = getIdFromJson(payload);
+
       if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
         throw Errors.datapoint_out_of_bounds;
       }
@@ -878,15 +890,12 @@ class DatapointSdk {
       foreach(JSONValue jid; payload.array) {
         // assert
         if(jid.type() != JSONType.integer &&
-            jid.type() != JSONType.uinteger) {
+            jid.type() != JSONType.uinteger &&
+            jid.type() != JSONType.string) {
           throw Errors.wrong_payload;
         }
-        ushort id;
-        if (jid.type() == JSONType.integer) {
-          id = to!ushort(jid.integer);
-        } else if (jid.type() == JSONType.uinteger) {
-          id = to!ushort(jid.uinteger);
-        }
+        ushort id = getIdFromJson(payload);
+
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
         }
@@ -943,10 +952,15 @@ class DatapointSdk {
       if(("id" in payload) == null) {
         throw Errors.wrong_payload;
       }
-      if(payload["id"].type() != JSONType.integer) {
+      if(payload["id"].type() != JSONType.integer &&
+          payload["id"].type() != JSONType.uinteger &&
+          payload["id"].type() != JSONType.string) {
         throw Errors.wrong_payload;
       }
-      ushort id = to!ushort(payload["id"].integer);
+
+      ushort id = getIdFromJson(payload["id"]);
+      payload["id"] = JSONValue(id);
+
       if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
         throw Errors.datapoint_out_of_bounds;
       }
@@ -983,10 +997,15 @@ class DatapointSdk {
         if(("id" in value) == null) {
           throw Errors.wrong_payload;
         }
-        if(value["id"].type() != JSONType.integer) {
-          throw Errors.wrong_payload_type;
+        if(value["id"].type() != JSONType.integer &&
+            value["id"].type() != JSONType.uinteger &&
+            value["id"].type() != JSONType.string) {
+          throw Errors.wrong_payload;
         }
-        ushort id = to!ushort(value["id"].integer);
+
+        ushort id = getIdFromJson(value["id"]);
+        value["id"] = JSONValue(id);
+
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
         }
@@ -1071,13 +1090,11 @@ class DatapointSdk {
   public JSONValue readValue(JSONValue payload) {
     JSONValue res;
     if (payload.type() == JSONType.integer ||
-        payload.type() == JSONType.uinteger) {
-      ushort id;
-      if (payload.type() == JSONType.integer) {
-        id = to!ushort(payload.integer);
-      } else if (payload.type() == JSONType.uinteger) {
-        id = to!ushort(payload.uinteger);
-      }
+        payload.type() == JSONType.uinteger ||
+        payload.type() == JSONType.string) {
+
+      ushort id = getIdFromJson(payload);
+
       if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
         throw Errors.datapoint_out_of_bounds;
       }
@@ -1113,15 +1130,13 @@ class DatapointSdk {
       foreach(JSONValue jid; payload.array) {
         // assert
         if(jid.type() != JSONType.integer &&
-            jid.type() != JSONType.uinteger) {
+            jid.type() != JSONType.uinteger &&
+            jid.type() != JSONType.string) {
           throw Errors.wrong_payload_type;
         }
-        ushort id; 
-        if (jid.type() == JSONType.integer) {
-          id = to!ushort(jid.integer);
-        } else if (jid.type() == JSONType.uinteger) {
-          id = to!ushort(jid.uinteger);
-        }
+
+        ushort id = getIdFromJson(jid);
+
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
         }
@@ -1231,15 +1246,15 @@ class DatapointSdk {
     ubyte[] uvalue = [0];
     if (payload.type() == JSONType.true_) {
       uvalue[0] = 1;
-    } else if (payload.type == JSONType.false_) {
+    } else if (payload.type() == JSONType.false_) {
       uvalue[0] = 0;
-    } else if (payload.type == JSONType.integer) {
+    } else if (payload.type() == JSONType.integer) {
       if (payload.integer != 0) {
         uvalue[0] = 1;
       } else {
         uvalue[0] = 0;
       }
-    } else if (payload.type == JSONType.uinteger) {
+    } else if (payload.type() == JSONType.uinteger) {
       if (payload.uinteger != 0) {
         uvalue[0] = 1;
       } else {
@@ -1409,9 +1424,11 @@ class DatapointSdk {
     return true;
   }
 
-  public void resetBaos() {
-    baos.reset();
-    baos.switch2BAOS();
+  public bool resetBaos() {
+    return baos.reset();
+  }
+  public bool resetBaos(string device, string params) {
+    return baos.reset(device, params);
   }
 
   // on incoming reset req. ETS download/bus dis and then -connected
