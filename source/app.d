@@ -11,8 +11,7 @@ import std.functional;
 
 import std.datetime.stopwatch;
 
-import clid;
-import clid.validate;
+import std.getopt;
 
 import logo;
 import baos;
@@ -22,26 +21,16 @@ import redis_dsm;
 import sdk;
 import errors;
 
-enum VERSION = "3_jul_2020";
+enum VERSION = "9_nov_2020";
 
 // struct for commandline params
-private struct Config {
-  @Parameter("prefix", 'p')
-    @Description("Prefix for key names(config, streams). Default: 'dobaos:'")
-    string dobaos_prefix;
 
-  @Parameter("device", 'd')
-    @Description("UART device. Will overwrite redis key value. Default: /dev/ttyAMA0")
-    string device;
-}
-
-void main() {
+void main(string[] args) {
   print_logo();
 
   auto dsm = new RedisDsm("127.0.0.1", cast(ushort)6379);
   // parse args
-  auto config = parseArguments!Config();
-  string dobaos_prefix;
+  string dobaos_prefix = "dobaos";
   string config_prefix; 
   string stream_prefix;
   string device;
@@ -57,30 +46,44 @@ void main() {
   default_names["first"] = "1";
   default_names["last"] = "1000";
 
+  void setUartDevice(string d) {
+    device = d;
+    // save to redis
+    dsm.setKey(config_prefix ~ ":uart_device", device);
+  }
+  auto getoptResult = getopt(args,
+      "prefix|p", 
+      "Prefix for redis config and stream keys. Default: dobaos",
+      &dobaos_prefix,
+
+      "device|d", 
+      "UART device. Will be persisted in redis key. Default: /dev/ttyAMA0", 
+      &setUartDevice);
+
+  if (getoptResult.helpWanted) {
+    defaultGetoptPrinter("SDK for Weinzierl BAOS 83x application layer.",
+      getoptResult.options);
+    return;
+  }
+  config_prefix = dobaos_prefix ~ ":config";
+  stream_prefix = dobaos_prefix ~ ":stream";
+
   void loadRedisConfig() {
-    dobaos_prefix = config.dobaos_prefix.length > 1 ? config.dobaos_prefix: "dobaos:";
-    config_prefix = dobaos_prefix ~ "config:";
-    stream_prefix = dobaos_prefix ~ "stream:";
-
-    device = dsm.getKey(config_prefix ~ "uart_device", "/dev/ttyAMA0", true);
+    device = dsm.getKey(config_prefix ~ ":uart_device", "/dev/ttyAMA0", true);
     // if device parameter was given in commandline arguments
-    if (config.device.length > 1) {
-      device = config.device;
-      dsm.setKey(config_prefix ~ "uart_device", device);
-    }
-    params = dsm.getKey(config_prefix ~ "uart_params", "19200:8E1", true);
+    params = dsm.getKey(config_prefix ~ ":uart_params", "19200:8E1", true);
 
-    req_channel = dsm.getKey(config_prefix ~ "req_channel", "dobaos_req", true);
-    cast_channel = dsm.getKey(config_prefix ~ "bcast_channel", "dobaos_cast", true);
+    req_channel = dsm.getKey(config_prefix ~ ":req_channel", "dobaos_req", true);
+    cast_channel = dsm.getKey(config_prefix ~ ":bcast_channel", "dobaos_cast", true);
     dsm.setChannels(req_channel, cast_channel);
 
-    stream_maxlen = dsm.getKey(config_prefix ~ "stream_maxlen", "1000", true);
-    stream_raw = (dsm.getKey(config_prefix ~ "stream_raw", "false", true)) == "true";
+    stream_maxlen = dsm.getKey(config_prefix ~ ":stream_maxlen", "1000", true);
+    stream_raw = (dsm.getKey(config_prefix ~ ":stream_raw", "false", true)) == "true";
 
     // array of datapoints to stream in redis
-    stream_ids_cfg = dsm.getKey(config_prefix ~ "stream_datapoints", "[]", true);
+    stream_ids_cfg = dsm.getKey(config_prefix ~ ":stream_datapoints", "[]", true);
     datapoint_names.clear();
-    datapoint_names = dsm.getHash(config_prefix ~ "names", default_names, true);
+    datapoint_names = dsm.getHash(config_prefix ~ ":names", default_names, true);
 
   }
   void loadStreamDatapoints() {
@@ -140,7 +143,7 @@ void main() {
       if (stream_raw) {
         entry["raw"] = _jvalue["raw"].toJSON();
       }
-      dsm.addToStream(stream_prefix ~ to!string(id), stream_maxlen, entry);
+      dsm.addToStream(stream_prefix ~ ":" ~ to!string(id), stream_maxlen, entry);
     }
   }
 
