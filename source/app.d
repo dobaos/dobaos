@@ -21,7 +21,7 @@ import redis_dsm;
 import sdk;
 import errors;
 
-enum VERSION = "9_nov_2020";
+enum VERSION = "25_nov_2020";
 
 // struct for commandline params
 
@@ -62,7 +62,7 @@ void main(string[] args) {
 
   if (getoptResult.helpWanted) {
     defaultGetoptPrinter("SDK for Weinzierl BAOS 83x application layer.",
-      getoptResult.options);
+        getoptResult.options);
     return;
   }
   config_prefix = dobaos_prefix ~ ":config";
@@ -95,24 +95,24 @@ void main(string[] args) {
       writeln("Error in stream_datapoints key. Streams disabled");
       return;
     }
-    if (jstream_ids.type() != JSONType.array) {
+    if (jstream_ids.type != JSONType.array) {
       writeln("Key stream_datapoints is not a JSON array");
       return;
     }
     stream_ids.length = jstream_ids.array.length;
     auto i = 0;
     foreach(entry; jstream_ids.array) {
-      if (entry.type() != JSONType.integer && 
-          entry.type() != JSONType.uinteger &&
-          entry.type() != JSONType.string) {
+      if (entry.type != JSONType.integer && 
+          entry.type != JSONType.uinteger &&
+          entry.type != JSONType.string) {
         writeln("Error in stream_ids key value.");
         return;
       }
-      if (entry.type() == JSONType.integer) {
+      if (entry.type == JSONType.integer) {
         stream_ids[i] = to!int(entry.integer);
-      } else if (entry.type() == JSONType.integer) {
+      } else if (entry.type == JSONType.integer) {
         stream_ids[i] = to!int(entry.uinteger);
-      } else if (entry.type() == JSONType.string) {
+      } else if (entry.type == JSONType.string) {
         if(datapoint_names.keys.canFind(entry.str)) {
           string v = datapoint_names[entry.str];
           try {
@@ -135,7 +135,7 @@ void main(string[] args) {
     int id = to!int(_jvalue["id"].integer);
     // add only if this datapoint is selected
     if (stream_ids.canFind(id)) {
-      if (_jvalue["value"].type() == JSONType.float_) {
+      if (_jvalue["value"].type == JSONType.float_) {
         _jvalue["value"] = format!"%0.2f"(_jvalue["value"].floating);
       }
       string[string] entry;
@@ -223,12 +223,12 @@ void main(string[] args) {
           // broadcast values
           auto jcast = parseJSON("{}");
           jcast["method"] = "datapoint value";
-          if (res["payload"].type() == JSONType.array) {
+          if (res["payload"].type == JSONType.array) {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
             auto count = 0;
             foreach(value; res["payload"].array) {
-              if (value["success"].type() == JSONType.true_) {
+              if (value["success"].type == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
                 _jvalue["id"] = value["id"];
                 _jvalue["raw"] = value["raw"];
@@ -241,9 +241,9 @@ void main(string[] args) {
                 }
 
                 int id;
-                if (value["id"].type() == JSONType.integer) {
+                if (value["id"].type == JSONType.integer) {
                   id = to!int(value["id"].integer);
-                } else if (value["id"].type() == JSONType.uinteger) {
+                } else if (value["id"].type == JSONType.uinteger) {
                   id = to!int(value["id"].uinteger);
                 }
                 addToStream(value);
@@ -252,9 +252,9 @@ void main(string[] args) {
             if (count > 0) {
               dsm.broadcast(jcast);
             }
-          } else if (res["payload"].type() == JSONType.object) {
+          } else if (res["payload"].type == JSONType.object) {
             auto value = res["payload"];
-            if (value["success"].type() == JSONType.true_) {
+            if (value["success"].type == JSONType.true_) {
               auto _jvalue = parseJSON("{}");
               _jvalue["id"] = value["id"];
               _jvalue["raw"] = value["raw"];
@@ -268,9 +268,9 @@ void main(string[] args) {
               }
 
               int id;
-              if (value["id"].type() == JSONType.integer) {
+              if (value["id"].type == JSONType.integer) {
                 id = to!int(value["id"].integer);
-              } else if (value["id"].type() == JSONType.uinteger) {
+              } else if (value["id"].type == JSONType.uinteger) {
                 id = to!int(value["id"].uinteger);
               }
               addToStream(value);
@@ -290,12 +290,12 @@ void main(string[] args) {
           // broadcast values
           auto jcast = parseJSON("{}");
           jcast["method"] = "datapoint value";
-          if (res["payload"].type() == JSONType.array) {
+          if (res["payload"].type == JSONType.array) {
             jcast["payload"] = parseJSON("[]");
             jcast["payload"].array.length = res["payload"].array.length;
             auto count = 0; 
             foreach(value; res["payload"].array) {
-              if (value["success"].type() == JSONType.true_) {
+              if (value["success"].type == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
                 _jvalue["id"] = value["id"];
                 _jvalue["raw"] = value["raw"];
@@ -308,9 +308,9 @@ void main(string[] args) {
                   continue;
                 }
                 int id;
-                if (value["id"].type() == JSONType.integer) {
+                if (value["id"].type == JSONType.integer) {
                   id = to!int(value["id"].integer);
-                } else if (value["id"].type() == JSONType.uinteger) {
+                } else if (value["id"].type == JSONType.uinteger) {
                   id = to!int(value["id"].uinteger);
                 }
                 addToStream(value);
@@ -319,9 +319,9 @@ void main(string[] args) {
             if (count > 0) {
               dsm.broadcast(jcast);
             }
-          } else if (res["payload"].type() == JSONType.object) {
+          } else if (res["payload"].type == JSONType.object) {
             auto value = res["payload"];
-            if (value["success"].type() == JSONType.true_) {
+            if (value["success"].type == JSONType.true_) {
               auto _jvalue = parseJSON("{}");
               _jvalue["id"] = value["id"];
               _jvalue["raw"] = value["raw"];
@@ -334,9 +334,9 @@ void main(string[] args) {
                 return;
               }
               int id;
-              if (value["id"].type() == JSONType.integer) {
+              if (value["id"].type == JSONType.integer) {
                 id = to!int(value["id"].integer);
-              } else if (value["id"].type() == JSONType.uinteger) {
+              } else if (value["id"].type == JSONType.uinteger) {
                 id = to!int(value["id"].uinteger);
               }
               addToStream(value);
@@ -487,9 +487,9 @@ void main(string[] args) {
         if (ind["payload"].type == JSONType.array) {
           foreach(value; ind["payload"].array) {
             int id;
-            if (value["id"].type() == JSONType.integer) {
+            if (value["id"].type == JSONType.integer) {
               id = to!int(value["id"].integer);
-            } else if (value["id"].type() == JSONType.uinteger) {
+            } else if (value["id"].type == JSONType.uinteger) {
               id = to!int(value["id"].uinteger);
             }
             addToStream(value);
@@ -497,9 +497,9 @@ void main(string[] args) {
         } else if (ind["payload"].type == JSONType.object) {
           int id;
           auto value = ind["payload"];
-          if (value["id"].type() == JSONType.integer) {
+          if (value["id"].type == JSONType.integer) {
             id = to!int(value["id"].integer);
-          } else if (value["id"].type() == JSONType.uinteger) {
+          } else if (value["id"].type == JSONType.uinteger) {
             id = to!int(value["id"].uinteger);
           }
           addToStream(value);
