@@ -1336,6 +1336,10 @@ class DatapointSdk {
               // and init
               initialized = init();
             }
+            res["method"] = "sdk reset";
+            res["payload"] = true;
+
+            return res;
           }
         }
       }
@@ -1440,7 +1444,8 @@ class DatapointSdk {
   }
 
   // on incoming reset req. ETS download/bus dis and then -connected
-  public void processResetInd() {
+  public JSONValue processResetInd() {
+    JSONValue res = parseJSON("null");
     if (baos.processResetInd()) {
       print_logo();
       writeln(" ==== Reset indication was received ==== ");
@@ -1455,7 +1460,14 @@ class DatapointSdk {
         // and init
         initialized = init();
       }
+      res = parseJSON("{}");
+      res["method"] = "sdk reset";
+      res["payload"] = true;
+
+      return res;
     }
+
+    return res;
   }
 
   this(string device = "/dev/ttyS1", string params = "19200:8E1") {

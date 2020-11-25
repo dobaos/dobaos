@@ -204,6 +204,8 @@ There is messages broadcasted to `bcast_channel` on incoming datapoint values or
 
 Also, on server item change(e.g. programming mode button or bus connect/disconnect), message with `server item` as a method is broadcasted.
 
+On sdk reset - message with `sdk reset` as a method.
+
 ## Redis streams
 
 Since version 10\_mar\_2020, there is support for Redis streams(redis v5.0.0 at least required).

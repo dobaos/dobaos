@@ -421,6 +421,11 @@ void main(string[] args) {
             if (!sdk.resetBaos(device, params)) continue;
             if (sdk.init()) break;
           }
+          JSONValue jcast = parseJSON("{}");
+          jcast["method"] = "sdk reset";
+          jcast["payload"] = true;
+          dsm.broadcast(jcast);
+
           res["method"] = "success";
           res["payload"] = true;
           sendResponse(res);
@@ -457,6 +462,10 @@ void main(string[] args) {
     }
     if (sdk.init()) break;
   }
+  JSONValue jcast = parseJSON("{}");
+  jcast["method"] = "sdk init";
+  jcast["payload"] = true;
+  dsm.broadcast(jcast);
 
   writeln("SDK ready");
   writefln("Started in %dms", sw.peek.total!"msecs");
@@ -464,10 +473,13 @@ void main(string[] args) {
 
   // process incoming values
   while(true) {
-    sdk.processResetInd();
+    JSONValue resetInd = sdk.processResetInd();
+    if (resetInd.type != JSONType.null_) {
+      dsm.broadcast(resetInd);
+    }
 
     JSONValue ind = sdk.processInd();
-    if (ind.type() != JSONType.null_) {
+    if (ind.type != JSONType.null_) {
       dsm.broadcast(ind);
 
       // now, if we got datapoint value that should be saved
