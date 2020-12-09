@@ -902,7 +902,7 @@ class DatapointSdk {
             jid.type() != JSONType.string) {
           throw Errors.wrong_payload;
         }
-        ushort id = getIdFromJson(payload);
+        ushort id = getIdFromJson(jid);
 
         if(id < MIN_DATAPOINT_NUM || id > MAX_DATAPOINT_NUM) {
           throw Errors.datapoint_out_of_bounds;
