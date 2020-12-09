@@ -55,6 +55,9 @@ class DatapointSdk {
     // then convert
     JSONValue res;
     res["id"] = to!int(dv.id);
+    if ((dv.id in id2name) !is null) {
+      res["name"] = id2name[dv.id];
+    }
 
     // assert that description can be found
     if ((dv.id in descriptions) is null) {

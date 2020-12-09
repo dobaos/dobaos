@@ -231,6 +231,9 @@ void main(string[] args) {
               if (value["success"].type == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
                 _jvalue["id"] = value["id"];
+                if (("name" in value) !is null) {
+                  _jvalue["name"] = value["name"];
+                }
                 _jvalue["raw"] = value["raw"];
                 _jvalue["value"] = value["value"];
                 jcast["payload"].array[count] = _jvalue;
@@ -257,6 +260,9 @@ void main(string[] args) {
             if (value["success"].type == JSONType.true_) {
               auto _jvalue = parseJSON("{}");
               _jvalue["id"] = value["id"];
+              if (("name" in value) !is null) {
+                _jvalue["name"] = value["name"];
+              }
               _jvalue["raw"] = value["raw"];
               _jvalue["value"] = value["value"];
               jcast["payload"] = _jvalue;
@@ -298,6 +304,9 @@ void main(string[] args) {
               if (value["success"].type == JSONType.true_) {
                 auto _jvalue = parseJSON("{}");
                 _jvalue["id"] = value["id"];
+                if (("name" in value) !is null) {
+                  _jvalue["name"] = value["name"];
+                }
                 _jvalue["raw"] = value["raw"];
                 _jvalue["value"] = value["value"];
                 jcast["payload"].array[count] = _jvalue;
@@ -324,6 +333,9 @@ void main(string[] args) {
             if (value["success"].type == JSONType.true_) {
               auto _jvalue = parseJSON("{}");
               _jvalue["id"] = value["id"];
+              if (("name" in value) !is null) {
+                _jvalue["name"] = value["name"];
+              }
               _jvalue["raw"] = value["raw"];
               _jvalue["value"] = value["value"];
               jcast["payload"] = _jvalue;
