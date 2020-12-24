@@ -58,7 +58,7 @@ enum OS_DatapointValueCommand {
   clear_transmission_state = 0x05
 }
 
-struct OS_DatapointValue  {
+struct OS_DatapointValue {
   ushort id;
   ubyte state;
   ubyte length;
@@ -66,7 +66,7 @@ struct OS_DatapointValue  {
   ubyte[] value;
 }
 
-struct OS_ServerItem  {
+struct OS_ServerItem {
   ushort id;
   ubyte length;
   ubyte[] value;
@@ -130,6 +130,7 @@ struct OS_Message {
     OS_ServerItem[] server_items;
     Exception error;
   };
+  ubyte[] raw;
 }
 
 class OS_Protocol {
@@ -320,6 +321,7 @@ class OS_Protocol {
 
   static OS_Message processIncomingMessage(ubyte[] data) {
     OS_Message result;
+    result.raw = data.dup;
     ubyte mainService = data.read!ubyte();
     ubyte subService = data.read!ubyte();
     try {
@@ -395,7 +397,8 @@ class OS_Protocol {
     return result;
   }
 
-  static ubyte[] GetDatapointValueReq(ushort start, ushort number = 1, OS_DatapointValueFilter filter = OS_DatapointValueFilter.all) {
+  static ubyte[] GetDatapointValueReq(ushort start, ushort number = 1,
+                             OS_DatapointValueFilter filter = OS_DatapointValueFilter.all) {
     ubyte[] result;
     // max len
     result.length = 7;

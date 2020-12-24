@@ -2,13 +2,14 @@
   Sdk to work with datapoints
  ***/
 
-module sdk;
+module datapoint_sdk;
 
 import core.thread;
 import std.algorithm;
 import std.base64;
 import std.bitmanip;
 import std.conv;
+import std.digest: toHexString;
 import std.json;
 import std.range.primitives : empty;
 import std.stdio;
@@ -22,11 +23,36 @@ import errors;
 const ushort MIN_DATAPOINT_NUM = 1;
 const ushort MAX_DATAPOINT_NUM = 1000;
 
+enum SdkMethods: string {
+  get_description = "get description",
+  get_value = "get value",
+  get_stored = "get stored",
+  read_value = "read value",
+  set_value = "set value",
+  put_value = "put value",
+  get_server_items = "get server items",
+  get_programming_mode = "get programming mode",
+  set_programming_mode = "set programming mode",
+  get_version = "version",
+  binary_request = "binary request",
+  reset = "reset",
+  success = "success",
+  error = "error",
+  cast_datapoint_value = "datapoint value",
+  cast_server_item = "server item",
+  cast_binary = "binary indication",
+  cast_sdk_init = "sdk init",
+  cast_sdk_reset = "sdk reset"
+}
+
 class DatapointSdk {
   private ushort SI_currentBufferSize;
   private OS_DatapointDescription[ushort] descriptions;
   private ushort[string] name2id;
   private string[ushort] id2name;
+
+  private OS_Message[] localInd;
+  private ubyte[][] binaryInd;
 
   public bool loadDatapointNames(string[string] table) {
     // input format: table[name] = id; { "datapoint1": 1 }
@@ -979,14 +1005,22 @@ class DatapointSdk {
         throw Errors.datapoint_not_found;
       }
       res = parseJSON("{}");
-      auto rawValue = convert2OSValue(payload);
+      OS_DatapointValue rawValue = convert2OSValue(payload);
       rawValue.command = command;
-      auto setValResult = baos.SetDatapointValueReq([rawValue]);
+      OS_Message setValResult = baos.SetDatapointValueReq([rawValue]);
+      ubyte[] rawReq = OS_Protocol.SetDatapointValueReq([rawValue]);
+      rawReq.write!ubyte(OS_Services.DatapointValueInd, 1);
       // for each datapoint add item to response
       if (setValResult.success) {
         res = convert2JSONValue(rawValue);
         values[id] = res;
         res["success"] = true;
+        OS_Message ind;
+        ind.service = OS_Services.DatapointValueInd;
+        ind.success = true;
+        ind.raw = rawReq;
+        ind.datapoint_values = [rawValue];
+        localInd ~= ind;
       } else {
         res["id"] = rawValue.id;
         res["success"] = false;
@@ -1054,8 +1088,16 @@ class DatapointSdk {
       void _setValues() {
         currentValues.length = count;
         auto setValResult = baos.SetDatapointValueReq(currentValues);
+        ubyte[] rawReq = OS_Protocol.SetDatapointValueReq(currentValues);
+        rawReq.write!ubyte(OS_Services.DatapointValueInd, 1);
         // for each datapoint add item to response
         if (setValResult.success) {
+          OS_Message ind;
+          ind.service = OS_Services.DatapointValueInd;
+          ind.success = true;
+          ind.raw = rawReq;
+          ind.datapoint_values = currentValues;
+          localInd ~= ind;
           for(auto i = currentIndex - count; i < currentIndex; i += 1) {
             // convert back to JSON value and return
             res.array[resCount] = convert2JSONValue(rawValues[i]);
@@ -1307,27 +1349,53 @@ class DatapointSdk {
 
     return res;
   }
+  public JSONValue jbinaryRequest(JSONValue jreq) {
+    if (jreq.type() != JSONType.string) {
+      throw Errors.wrong_payload_type;
+    }
+    ubyte[] data = Base64.decode(jreq.str);
+    ubyte[] res = binRequest(data);
+    JSONValue jres = JSONValue(Base64.encode(res));
 
-  public JSONValue processInd() {
-    JSONValue res = parseJSON("null");
-    OS_Message ind = baos.processInd();
+    return jres;
+  }
+  public ubyte[] binRequest(ubyte[] data) {
+    ubyte[] res = baos.rawRequest(data);
+
+    OS_Message parsed = OS_Protocol.processIncomingMessage(res);
+    // if SetDatapointValueRes was received and - broadcast
+    if (parsed.success &&
+        parsed.service == OS_Services.SetDatapointValueRes) {
+      foreach(dv; parsed.datapoint_values) {
+        if (dv.command == OS_DatapointValueCommand.read) return res;
+      }
+
+      OS_Message reqParsed = OS_Protocol.processIncomingMessage(data);
+      localInd ~= reqParsed;
+    }
+
+    return res;
+  }
+
+  public JSONValue[] processOSInd(OS_Message ind) {
+    JSONValue[] res = [];
     if (ind.service == OS_Services.DatapointValueInd) {
-      res = parseJSON("{}");
-      res["method"] = "datapoint value";
-      res["payload"] = parseJSON("[]");
-      res["payload"].array.length = ind.datapoint_values.length;
+      JSONValue j = parseJSON("{}");
+      j["method"] = SdkMethods.cast_datapoint_value;
+      j["payload"] = parseJSON("[]");
+      j["payload"].array.length = ind.datapoint_values.length;
       auto count = 0;
       foreach(OS_DatapointValue dv; ind.datapoint_values) {
         // convert to json type
         try {
-          res["payload"].array[count] = convert2JSONValue(dv);
-          values[dv.id] = res["payload"].array[count];
+          j["payload"].array[count] = convert2JSONValue(dv);
+          values[dv.id] = j["payload"].array[count];
           count++;
         } catch(Exception e) {
           writeln(e);
           if (e == Errors.datapoint_not_found) {
             print_logo();
-            writeln(" ==== Unknown datapoint indication was received ==== ");
+            writeln(" ==== value for unknown datapoint was received ==== ");
 
             bool initialized = false;
             while(!initialized) {
@@ -1339,40 +1407,79 @@ class DatapointSdk {
               // and init
               initialized = init();
             }
-            res["method"] = "sdk reset";
-            res["payload"] = true;
+            j["method"] = SdkMethods.cast_sdk_reset;
+            j["payload"] = true;
 
             return res;
           }
         }
       }
       if (count > 0) {
-        res["payload"].array.length = count;
-      } else {
-        res = parseJSON("null");
+        j["payload"].array.length = count;
+        res ~= j;
+        // now binary
+        binaryInd ~= ind.raw;
       }
+      return res;
     }
     if (ind.service == OS_Services.ServerItemInd) {
-      res = parseJSON("{}");
-      res["method"] = "server item";
-      res["payload"] = parseJSON("[]");
-      res["payload"].array.length = ind.server_items.length;
+      JSONValue j = parseJSON("{}");
+      j["method"] = SdkMethods.cast_server_item;
+      j["payload"] = parseJSON("[]");
+      j["payload"].array.length = ind.server_items.length;
       auto count = 0;
       foreach(OS_ServerItem si; ind.server_items) {
         try {
-          res["payload"].array[count] = parseJSON("{}");
-          res["payload"].array[count]["id"] = si.id;
-          res["payload"].array[count]["value"] = si.value;
-          res["payload"].array[count]["raw"] = Base64.encode(si.value);
+          j["payload"].array[count] = parseJSON("{}");
+          j["payload"].array[count]["id"] = si.id;
+          j["payload"].array[count]["value"] = si.value;
+          j["payload"].array[count]["raw"] = Base64.encode(si.value);
           count++;
         } catch(Exception e) {
           writeln(e);
         }
       }
       if (count > 0) {
-        res["payload"].array.length = count;
+        j["payload"].array.length = count;
+        res ~= j;
+
+        // now binary
+        binaryInd ~= ind.raw;
+      }
+      return res;
+    }
+
+    return res;
+  }
+  public JSONValue[] processInd() {
+    JSONValue[] res;
+
+    // indications from baos module
+    OS_Message ind = baos.processInd();
+    res ~= processOSInd(ind);
+
+    // local indications - after set/put value
+    if (localInd.length > 0) {
+      ind = localInd[0];
+      res ~= processOSInd(ind);
+      if (localInd.length > 1) {
+        localInd= localInd[1..$];
       } else {
-        res = parseJSON("null");
+        localInd = [];
+      }
+    }
+
+    return res;
+  }
+  ubyte[] getBinaryIndications() {
+    ubyte[] res;
+
+    if (binaryInd.length > 0) {
+      res ~= binaryInd[0];
+      if (binaryInd.length > 1) {
+        binaryInd = binaryInd[1..$];
+      } else {
+        binaryInd = [];
       }
     }
 
@@ -1382,12 +1489,13 @@ class DatapointSdk {
   // entry point
   // load datapoints at very start and reset
   public bool init() {
-    auto serverItemMessage = baos.GetServerItemReq(14, 1);
+    auto siMessage = baos.GetServerItemReq(14, 1);
     // maximum buffer size
     SI_currentBufferSize = 0;
     writeln("Loading server items");
-    if (serverItemMessage.service == OS_Services.GetServerItemRes && serverItemMessage.success) {
-      foreach(OS_ServerItem si; serverItemMessage.server_items) {
+    if (siMessage.success && 
+        siMessage.service == OS_Services.GetServerItemRes) {
+      foreach(OS_ServerItem si; siMessage.server_items) {
         // maximum buffer size
         if (si.id == 14) {
           SI_currentBufferSize = si.value.read!ushort();
@@ -1417,12 +1525,14 @@ class DatapointSdk {
         number = to!ushort(MAX_DATAPOINT_NUM - start + 1);
       }
       auto descr = baos.GetDatapointDescriptionReq(start, number);
-      if (descr.success && descr.service == OS_Services.GetDatapointDescriptionRes) {
+      if (descr.success &&
+          descr.service == OS_Services.GetDatapointDescriptionRes) {
         foreach(OS_DatapointDescription dd; descr.datapoint_descriptions) {
           descriptions[dd.id] = dd;
           count++;
         }
-      } else  if (!descr.success && descr.service == OS_Services.GetDatapointDescriptionRes) {
+      } else  if (!descr.success && 
+          descr.service == OS_Services.GetDatapointDescriptionRes) {
         // there will be a lot of baos erros, 
         // if there is datapoints no configured
         // and so ignore them
@@ -1464,7 +1574,7 @@ class DatapointSdk {
         initialized = init();
       }
       res = parseJSON("{}");
-      res["method"] = "sdk reset";
+      res["method"] = SdkMethods.cast_sdk_reset;
       res["payload"] = true;
 
       return res;
@@ -1473,7 +1583,8 @@ class DatapointSdk {
     return res;
   }
 
-  this(string device = "/dev/ttyS1", string params = "19200:8E1") {
+  this(string device = "/dev/ttyS1",
+      string params = "19200:8E1") {
     baos = new Baos(device, params);
   }
 }

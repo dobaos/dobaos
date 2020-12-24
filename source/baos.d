@@ -81,8 +81,7 @@ class Baos {
     void[1024*4] data = void;
     void[] tmp;
     tmp = com.read(data);
-    if(tmp.length > 0)
-    {
+    if(tmp.length > 0) {
       ubyte[] chunk = cast(ubyte[]) tmp;
 
       ft12.parse(chunk);
@@ -107,7 +106,6 @@ class Baos {
       return result;
     }
 
-    // TODO: return null?
     OS_Message result;
     result.service = OS_Services.unknown;
 
@@ -122,64 +120,66 @@ class Baos {
 
   private OS_Message commonRequest(ubyte[] message) {
     // reqs are syncronuous, so, no queue is required
-    //if (_resetAckReceived && _ackReceived && _responseReceived) {
-      _ackReceived = false;
-      _responseReceived = false;
-      if (currentParity == FT12FrameParity.unknown || currentParity == FT12FrameParity.even) {
-        currentParity = FT12FrameParity.odd;
-      } else {
-        currentParity = FT12FrameParity.even;
-      }
+    _ackReceived = false;
+    _responseReceived = false;
+    if (currentParity == FT12FrameParity.unknown || currentParity == FT12FrameParity.even) {
+      currentParity = FT12FrameParity.odd;
+    } else {
+      currentParity = FT12FrameParity.even;
+    }
 
-      FT12Frame request;
-      request.type = FT12FrameType.dataFrame;
-      request.parity = currentParity;
-      request.payload = message[0..$];
-      ubyte[] buffer = ft12.compose(request);
-      com.write(buffer);
-      sw.reset();
-      sw.start();
-      // пока не получен ответ, либо индикатор сброса, либо таймаут
-      while(!(_responseReceived || _resetInd || _timeout)) {
-        try {
-          processIncomingData();
-          processResponseTimeout();
-          if (_resetInd) {
-            _response.success = false;
-            _response.service = OS_Services.unknown;
-            _response.error = Errors.interrupted;
+    FT12Frame request;
+    request.type = FT12FrameType.dataFrame;
+    request.parity = currentParity;
+    request.payload = message[0..$];
+    ubyte[] buffer = ft12.compose(request);
+    com.write(buffer);
+    sw.reset();
+    sw.start();
+    // пока не получен ответ, либо индикатор сброса, либо таймаут
+    while(!(_responseReceived || _resetInd || _timeout)) {
+      try {
+        processIncomingData();
+        processResponseTimeout();
+        if (_resetInd) {
+          _response.success = false;
+          _response.service = OS_Services.unknown;
+          _response.error = Errors.interrupted;
 
-            _responseReceived = true;
-            _ackReceived = true;
-          }
-          if (_timeout) {
-            _response.success = false;
-            _response.service = OS_Services.unknown;
-            _response.error = Errors.timeout;
-
-            _responseReceived = true;
-            _ackReceived = true;
-
-            _timeout = false;
-            sw.reset();
-          }
-        } catch(Exception e) {
-          writeln(e);
+          _responseReceived = true;
+          _ackReceived = true;
         }
-        Thread.sleep(2.msecs);
-      }
+        if (_timeout) {
+          _response.success = false;
+          _response.service = OS_Services.unknown;
+          _response.error = Errors.timeout;
 
-      return _response;
-    //}
+          _responseReceived = true;
+          _ackReceived = true;
+
+          _timeout = false;
+          sw.reset();
+        }
+      } catch(Exception e) {
+        writeln(e);
+      }
+      Thread.sleep(2.msecs);
+    }
+
+    return _response;
 
     /***
-    OS_Message result;
-    result.success = false;
-    result.error = Errors.unknown;
-    result.service = OS_Services.unknown;
+      OS_Message result;
+      result.success = false;
+      result.error = Errors.unknown;
+      result.service = OS_Services.unknown;
 
-    return result;
-    ***/
+      return result;
+     ***/
+  }
+  public ubyte[] rawRequest(ubyte[] message) {
+    OS_Message res = commonRequest(message);
+    return res.raw;
   }
   public OS_Message GetDatapointDescriptionReq(ushort start, ushort number = 1) {
     return commonRequest(OS_Protocol.GetDatapointDescriptionReq(start, number));
@@ -250,6 +250,7 @@ class Baos {
 
   // constructor
   this(string device = "/dev/ttyS1", string params = "19200:8E1", int req_timeout = 300) {
+    writeln("hello, baos");
     com = new SerialPortNonBlk(device, params);
     this.req_timeout = req_timeout;
     this.sw = StopWatch(AutoStart.no);

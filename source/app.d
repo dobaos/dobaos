@@ -1,37 +1,45 @@
 module main;
 import core.thread;
 import std.algorithm: canFind;
+import std.base64;
 import std.conv;
 import std.format;
 import std.stdio;
 import std.bitmanip;
-import std.range.primitives : empty;
 import std.json;
-import std.functional;
-
-import std.datetime.stopwatch;
-
+import std.digest: toHexString;
 import std.getopt;
+import std.functional;
+import std.range.primitives : empty;
+import std.datetime.stopwatch;
+import std.socket: Socket;
 
 import logo;
 import baos;
 import datapoints;
 import object_server;
 import redis_dsm;
-import sdk;
+import datapoint_sdk;
 import errors;
+import socket_server;
 
-enum VERSION = "25_nov_2020";
+enum VERSION = "24_dec_2020";
 
 // struct for commandline params
 
 void main(string[] args) {
   print_logo();
 
-  auto dsm = new RedisDsm("127.0.0.1", cast(ushort)6379);
+  RedisDsm dsm;
+  DatapointSdk sdk;
+  SocketServer knxnet_server;
+  bool knxnet_enabled = false;
+  ushort knxnet_port = 0;
+
+  dsm = new RedisDsm("127.0.0.1", cast(ushort)6379);
   // parse args
   string dobaos_prefix = "dobaos";
-  string config_prefix; 
+  string config_prefix = dobaos_prefix ~ ":config";
   string stream_prefix;
   string device;
   string params;
@@ -46,8 +54,9 @@ void main(string[] args) {
   default_names["first"] = "1";
   default_names["last"] = "1000";
 
-  void setUartDevice(string d) {
-    device = d;
+  void setUartDevice(string d, string v) {
+    config_prefix = dobaos_prefix ~ ":config";
+    device = v;
     // save to redis
     dsm.setKey(config_prefix ~ ":uart_device", device);
   }
@@ -85,6 +94,12 @@ void main(string[] args) {
     datapoint_names.clear();
     datapoint_names = dsm.getHash(config_prefix ~ ":names", default_names, true);
 
+    string knxnet_port_cfg = dsm.getKey(config_prefix ~ ":knxnet_port", "0", true);
+    int knxnet_port_int = parse!int(knxnet_port_cfg);
+    knxnet_enabled = knxnet_port_int > 0;
+    if (knxnet_enabled) {
+      knxnet_port = to!ushort(knxnet_port_int);
+    }
   }
   void loadStreamDatapoints() {
     stream_ids = [];
@@ -146,13 +161,70 @@ void main(string[] args) {
       dsm.addToStream(stream_prefix ~ ":" ~ to!string(id), stream_maxlen, entry);
     }
   }
+  void initKnxNetServer() {
+    writeln("KNXNetServer enabled: ", knxnet_enabled);
+    if (!knxnet_enabled) return;
+    if (knxnet_server !is null) {
+      knxnet_server.stop();
+    }
+    knxnet_server = new SocketServer(knxnet_port);
+    knxnet_server.onOpen = (Socket sock, string addr) {
+      writeln("KNXNet Connection open: ", addr);
+    };
+    knxnet_server.onClose = (Socket sock, string addr) {
+      writeln("KNXNet Connection closed: ", addr);
+    };
+    knxnet_server.onMessage = (Socket sock, string addr, ubyte[] msg) {
+      if (msg.toHexString == "0620F080001004000000F001000A0001") {
+        // little hack to avoid UART flooding
+        // iRidium lite is asking twice in a sec for bus connection state
+        // say it's okay - bus connected
+        ubyte[] hackResponse = Base64.decode("BiDwgAAUBAAAAPCBAAoAAQAKAQE=");
+        sock.send(hackResponse);
+        return;
+      }
+
+      // decode
+      // knxnet header
+      ubyte headerSize = msg.read!ubyte();
+      ubyte version_ = msg.read!ubyte();
+      ushort reqType = msg.read!ushort(); // 0xf080 OBJSERV
+      ushort frameSize = msg.read!ushort();
+      // conn header 
+      ubyte connHeaderSize = msg.read!ubyte();
+      msg = msg[connHeaderSize-1..$];
+
+      // objserver message
+      ubyte[] res = sdk.binRequest(msg);
+
+      // compose response
+      ubyte[] response = [];
+      response.length = 10;
+      response.write!ubyte(headerSize, 0);
+      response.write!ubyte(version_, 1);
+      response.write!ushort(reqType, 2);
+      auto resLen = res.length + headerSize + connHeaderSize;
+      response.write!ushort(to!ushort(resLen), 4);
+
+      response.write!ubyte(4, 6);
+      response.write!ubyte(0, 7);
+      response.write!ubyte(0, 8);
+      response.write!ubyte(0, 9);
+
+      response ~= res;
+
+      sock.send(response);
+    };
+
+    writeln("KNXNetServer is listening on port: ", knxnet_port);
+  }
 
   loadRedisConfig();
 
   StopWatch sw;
   sw.start();
 
-  auto sdk = new DatapointSdk(device, params);
+  sdk = new DatapointSdk(device, params);
 
   // load datapoint names to sdk. if error, then disable feature
   if (!sdk.loadDatapointNames(datapoint_names)) {
@@ -182,240 +254,130 @@ void main(string[] args) {
 
     string method = ("method" in jreq).str;
     switch(method) {
-      case "get description":
+      case SdkMethods.get_description:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = sdk.getDescription(jreq["payload"]);
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "get value":
+      case SdkMethods.get_value:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = sdk.getValue(jreq["payload"]);
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "get stored":
+      case SdkMethods.get_stored:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = sdk.getStored(jreq["payload"]);
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "set value":
+      case SdkMethods.set_value:
         try {
-          res["method"] = "success";
-          res["payload"] = sdk.setValue(jreq["payload"], OS_DatapointValueCommand.set_and_send);
+          res["method"] = SdkMethods.success;
+          res["payload"] = sdk.setValue(jreq["payload"],
+              OS_DatapointValueCommand.set_and_send);
           sendResponse(res);
-          // broadcast values
-          auto jcast = parseJSON("{}");
-          jcast["method"] = "datapoint value";
-          if (res["payload"].type == JSONType.array) {
-            jcast["payload"] = parseJSON("[]");
-            jcast["payload"].array.length = res["payload"].array.length;
-            auto count = 0;
-            foreach(value; res["payload"].array) {
-              if (value["success"].type == JSONType.true_) {
-                auto _jvalue = parseJSON("{}");
-                _jvalue["id"] = value["id"];
-                if (("name" in value) !is null) {
-                  _jvalue["name"] = value["name"];
-                }
-                _jvalue["raw"] = value["raw"];
-                _jvalue["value"] = value["value"];
-                jcast["payload"].array[count] = _jvalue;
-                count += 1;
-                // check if datapoint should be saved
-                if (stream_ids.length == 0) {
-                  continue;
-                }
-
-                int id;
-                if (value["id"].type == JSONType.integer) {
-                  id = to!int(value["id"].integer);
-                } else if (value["id"].type == JSONType.uinteger) {
-                  id = to!int(value["id"].uinteger);
-                }
-                addToStream(value);
-              }
-            }
-            if (count > 0) {
-              dsm.broadcast(jcast);
-            }
-          } else if (res["payload"].type == JSONType.object) {
-            auto value = res["payload"];
-            if (value["success"].type == JSONType.true_) {
-              auto _jvalue = parseJSON("{}");
-              _jvalue["id"] = value["id"];
-              if (("name" in value) !is null) {
-                _jvalue["name"] = value["name"];
-              }
-              _jvalue["raw"] = value["raw"];
-              _jvalue["value"] = value["value"];
-              jcast["payload"] = _jvalue;
-              dsm.broadcast(jcast);
-
-              // check if datapoint should be saved
-              if (stream_ids.length == 0) {
-                return;
-              }
-
-              int id;
-              if (value["id"].type == JSONType.integer) {
-                id = to!int(value["id"].integer);
-              } else if (value["id"].type == JSONType.uinteger) {
-                id = to!int(value["id"].uinteger);
-              }
-              addToStream(value);
-            }
-          }
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "put value":
+      case SdkMethods.put_value:
         try {
-          res["method"] = "success";
-          res["payload"] = sdk.setValue(jreq["payload"], OS_DatapointValueCommand.set);
+          res["method"] = SdkMethods.success;
+          res["payload"] = sdk.setValue(jreq["payload"], 
+              OS_DatapointValueCommand.set);
           sendResponse(res);
-          // broadcast values
-          auto jcast = parseJSON("{}");
-          jcast["method"] = "datapoint value";
-          if (res["payload"].type == JSONType.array) {
-            jcast["payload"] = parseJSON("[]");
-            jcast["payload"].array.length = res["payload"].array.length;
-            auto count = 0; 
-            foreach(value; res["payload"].array) {
-              if (value["success"].type == JSONType.true_) {
-                auto _jvalue = parseJSON("{}");
-                _jvalue["id"] = value["id"];
-                if (("name" in value) !is null) {
-                  _jvalue["name"] = value["name"];
-                }
-                _jvalue["raw"] = value["raw"];
-                _jvalue["value"] = value["value"];
-                jcast["payload"].array[count] = _jvalue;
-                count += 1;
-
-                // check if datapoint should be stored
-                if (stream_ids.length == 0) {
-                  continue;
-                }
-                int id;
-                if (value["id"].type == JSONType.integer) {
-                  id = to!int(value["id"].integer);
-                } else if (value["id"].type == JSONType.uinteger) {
-                  id = to!int(value["id"].uinteger);
-                }
-                addToStream(value);
-              }
-            }
-            if (count > 0) {
-              dsm.broadcast(jcast);
-            }
-          } else if (res["payload"].type == JSONType.object) {
-            auto value = res["payload"];
-            if (value["success"].type == JSONType.true_) {
-              auto _jvalue = parseJSON("{}");
-              _jvalue["id"] = value["id"];
-              if (("name" in value) !is null) {
-                _jvalue["name"] = value["name"];
-              }
-              _jvalue["raw"] = value["raw"];
-              _jvalue["value"] = value["value"];
-              jcast["payload"] = _jvalue;
-              dsm.broadcast(jcast);
-
-              // check if datapoint should be stored
-              if (stream_ids.length == 0) {
-                return;
-              }
-              int id;
-              if (value["id"].type == JSONType.integer) {
-                id = to!int(value["id"].integer);
-              } else if (value["id"].type == JSONType.uinteger) {
-                id = to!int(value["id"].uinteger);
-              }
-              addToStream(value);
-            }
-          }
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "read value":
+      case SdkMethods.read_value:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = sdk.readValue(jreq["payload"]);
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "get programming mode":
+      case SdkMethods.get_programming_mode:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = sdk.getProgrammingMode();
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "set programming mode":
+      case SdkMethods.set_programming_mode:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = sdk.setProgrammingMode(jreq["payload"]);
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "get server items":
+      case SdkMethods.get_server_items:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = sdk.getServerItems();
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "version":
+      case SdkMethods.get_version:
         try {
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = VERSION;
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
-      case "reset":
+      case SdkMethods.binary_request:
+        try {
+          res["method"] = SdkMethods.success;
+          res["payload"] = sdk.jbinaryRequest(jreq["payload"]);
+          sendResponse(res);
+        } catch(Exception e) {
+          res["method"] = SdkMethods.error;
+          res["payload"] = e.message;
+          sendResponse(res);
+        }
+        break;
+      case SdkMethods.reset:
         try {
           print_logo();
           writeln("==== Reset request received ====");
@@ -432,23 +394,24 @@ void main(string[] args) {
             dsm.subscribe(toDelegate(&handleRequest));
             if (!sdk.resetBaos(device, params)) continue;
             if (sdk.init()) break;
+            initKnxNetServer();
           }
           JSONValue jcast = parseJSON("{}");
           jcast["method"] = "sdk reset";
           jcast["payload"] = true;
           dsm.broadcast(jcast);
 
-          res["method"] = "success";
+          res["method"] = SdkMethods.success;
           res["payload"] = true;
           sendResponse(res);
         } catch(Exception e) {
-          res["method"] = "error";
+          res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
         }
         break;
       default:
-        res["method"] = "error";
+        res["method"] = SdkMethods.error;
         res["payload"] = Errors.unknown_method.message;
         sendResponse(res);
         break;
@@ -459,7 +422,7 @@ void main(string[] args) {
   writeln("IPC ready");
 
   while(true) {
-    if (!sdk.resetBaos(device, params)) {
+    if (!sdk.resetBaos()) {
       loadRedisConfig();
       if (!sdk.loadDatapointNames(datapoint_names)) {
         writeln("Error parsing datapoint names table");
@@ -470,6 +433,7 @@ void main(string[] args) {
       dsm.unsubscribe();
       dsm.setChannels(req_channel, cast_channel);
       dsm.subscribe(toDelegate(&handleRequest));
+      initKnxNetServer();
       continue;
     }
     if (sdk.init()) break;
@@ -483,6 +447,8 @@ void main(string[] args) {
   writefln("Started in %dms", sw.peek.total!"msecs");
   sw.stop();
 
+  initKnxNetServer();
+
   // process incoming values
   while(true) {
     JSONValue resetInd = sdk.processResetInd();
@@ -490,12 +456,13 @@ void main(string[] args) {
       dsm.broadcast(resetInd);
     }
 
-    JSONValue ind = sdk.processInd();
-    if (ind.type != JSONType.null_) {
-      dsm.broadcast(ind);
+    JSONValue[] indications = sdk.processInd();
 
-      // now, if we got datapoint value that should be saved
-      if (ind["method"].str == "datapoint value" && stream_ids.length > 0) {
+    foreach(ind; indications) {
+      dsm.broadcast(ind);
+      // add to stream if present in array
+      if (ind["method"].str == SdkMethods.cast_datapoint_value &&
+          stream_ids.length > 0) {
         if (ind["payload"].type == JSONType.array) {
           foreach(value; ind["payload"].array) {
             int id;
@@ -519,7 +486,34 @@ void main(string[] args) {
       }
     }
 
+    ubyte[] binInd = sdk.getBinaryIndications();
+    if (binInd.length > 0) {
+      if (knxnet_enabled) {
+        ubyte[] bcast = [];
+        bcast.length = 10;
+        bcast.write!ubyte(0x06, 0);
+        bcast.write!ubyte(0x20, 1);
+        bcast.write!ushort(0xf080, 2);
+        auto len = binInd.length + 6 + 4;
+        bcast.write!ushort(to!ushort(len), 4);
+
+        bcast.write!ubyte(4, 6);
+        bcast.write!ubyte(0, 7);
+        bcast.write!ubyte(0, 8);
+        bcast.write!ubyte(0, 9);
+
+        bcast ~= binInd;
+        //writeln("Broadcasting: ", bcast.toHexString);
+
+        knxnet_server.broadcast(bcast);
+      }
+    }
+
     dsm.processMessages();
+
+    if(knxnet_enabled && knxnet_server !is null) {
+      knxnet_server.loop();
+    }
 
     // calculate approximate sleep time depending on baudrate.
     // assuming default baud 19200 bits per second is used.
