@@ -166,8 +166,16 @@ void main(string[] args) {
     if (!knxnet_enabled) return;
     if (knxnet_server !is null) {
       knxnet_server.stop();
+      knxnet_server = null;
     }
-    knxnet_server = new SocketServer(knxnet_port);
+    try {
+      knxnet_server = new SocketServer(knxnet_port);
+    } catch(Exception e) {
+      writeln("Exception while initializing KNXNet server: ");
+      writeln(e.message);
+      knxnet_server = null;
+      return;
+    }
     knxnet_server.onOpen = (Socket sock, string addr) {
       writeln("KNXNet Connection open: ", addr);
     };
@@ -215,7 +223,6 @@ void main(string[] args) {
 
       sock.send(response);
     };
-
     writeln("KNXNetServer is listening on port: ", knxnet_port);
   }
 
@@ -393,8 +400,9 @@ void main(string[] args) {
             dsm.setChannels(req_channel, cast_channel);
             dsm.subscribe(toDelegate(&handleRequest));
             if (!sdk.resetBaos(device, params)) continue;
-            if (sdk.init()) break;
+            bool ready = sdk.init();
             initKnxNetServer();
+            if (ready) break;
           }
           JSONValue jcast = parseJSON("{}");
           jcast["method"] = "sdk reset";
@@ -433,7 +441,6 @@ void main(string[] args) {
       dsm.unsubscribe();
       dsm.setChannels(req_channel, cast_channel);
       dsm.subscribe(toDelegate(&handleRequest));
-      initKnxNetServer();
       continue;
     }
     if (sdk.init()) break;
@@ -513,6 +520,9 @@ void main(string[] args) {
 
     if(knxnet_enabled && knxnet_server !is null) {
       knxnet_server.loop();
+    } else if (knxnet_enabled && knxnet_server is null) {
+      Thread.sleep(1000.msecs);
+      initKnxNetServer();
     }
 
     // calculate approximate sleep time depending on baudrate.

@@ -2,7 +2,7 @@ import core.time;
 
 import std.algorithm : remove;
 import std.conv : to;
-import std.socket : InternetAddress, Socket, SocketException, SocketSet, TcpSocket;
+import std.socket;
 import std.stdio : writeln, writefln;
 
 
@@ -18,6 +18,7 @@ class SocketServer {
 
   this(ushort port, ushort max_connections = 50) {
     listener = new TcpSocket();
+    listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
     assert(listener.isAlive);
     listener.blocking(false);
     listener.bind(new InternetAddress(port));
@@ -40,9 +41,12 @@ class SocketServer {
 
   void stop() {
     foreach(sock; reads) {
+      sock.shutdown(SocketShutdown.BOTH);
       sock.close();
     }
     socketSet.reset();
+    listener.shutdown(SocketShutdown.BOTH);
+    listener.close();
   }
 
   void loop(Duration timeout = 1.msecs) {
