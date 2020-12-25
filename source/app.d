@@ -1,4 +1,6 @@
 module main;
+
+import core.exception:RangeError;
 import core.thread;
 import std.algorithm: canFind;
 import std.base64;
@@ -177,10 +179,10 @@ void main(string[] args) {
       return;
     }
     knxnet_server.onOpen = (Socket sock, string addr) {
-      writeln("KNXNet Connection open: ", addr);
+      //writeln("KNXNet Connection open: ", addr);
     };
     knxnet_server.onClose = (Socket sock, string addr) {
-      writeln("KNXNet Connection closed: ", addr);
+      //writeln("KNXNet Connection closed: ", addr);
     };
     knxnet_server.onMessage = (Socket sock, string addr, ubyte[] msg) {
       if (msg.toHexString == "0620F080001004000000F001000A0001") {
@@ -203,7 +205,13 @@ void main(string[] args) {
       msg = msg[connHeaderSize-1..$];
 
       // objserver message
-      ubyte[] res = sdk.binRequest(msg);
+      ubyte[] res;
+      try {
+        res = sdk.binaryRequest(msg);
+      } catch (RangeError e) {
+        writeln("RangeError while processing KNXNet binary request");
+        return;
+      }
 
       // compose response
       ubyte[] response = [];
@@ -382,6 +390,10 @@ void main(string[] args) {
           res["method"] = SdkMethods.error;
           res["payload"] = e.message;
           sendResponse(res);
+        } catch (RangeError e) {
+          res["method"] = SdkMethods.error;
+          res["payload"] = Errors.range.message;
+          sendResponse(res);
         }
         break;
       case SdkMethods.reset:
@@ -521,7 +533,7 @@ void main(string[] args) {
     if(knxnet_enabled && knxnet_server !is null) {
       knxnet_server.loop();
     } else if (knxnet_enabled && knxnet_server is null) {
-      Thread.sleep(1000.msecs);
+      Thread.sleep(5000.msecs);
       initKnxNetServer();
     }
 

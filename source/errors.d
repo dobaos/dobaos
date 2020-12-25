@@ -2,6 +2,7 @@ module errors;
 
 enum Errors {
   unknown = new Exception("ERR_UNKNOWN"),
+  range = new Exception("ERR_ARRAY_RANGE"),
   interrupted = new Exception("ERR_INTERRUPTED"),
   timeout = new Exception("ERR_TIMEOUT"),
   no_method_field = new Exception("ERR_NO_METHOD_FIELD"),

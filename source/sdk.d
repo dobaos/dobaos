@@ -1354,24 +1354,28 @@ class DatapointSdk {
       throw Errors.wrong_payload_type;
     }
     ubyte[] data = Base64.decode(jreq.str);
-    ubyte[] res = binRequest(data);
+    ubyte[] res = binaryRequest(data);
     JSONValue jres = JSONValue(Base64.encode(res));
 
     return jres;
   }
-  public ubyte[] binRequest(ubyte[] data) {
+  public ubyte[] binaryRequest(ubyte[] data) {
     ubyte[] res = baos.rawRequest(data);
 
     OS_Message parsed = OS_Protocol.processIncomingMessage(res);
-    // if SetDatapointValueRes was received and - broadcast
+    // if successful SetDatapointValueRes was received - broadcast
     if (parsed.success &&
         parsed.service == OS_Services.SetDatapointValueRes) {
-      foreach(dv; parsed.datapoint_values) {
-        if (dv.command == OS_DatapointValueCommand.read) return res;
-      }
+      // SetDatapointValue.Req service accept datapoint values in format:
+      // [id, 2bytes]-[command, 1b]-[length, 1b], [value, var len]
+      // DatapointValueInd has following format:
+      // [id, 2bytes]-[state, 1b]-[length, 1b], [value, var len]
+      // So parse it just by replacing service
+      // don't care about command and state fields
+      data.write!ubyte(OS_Services.DatapointValueInd, 1);
+      OS_Message ind = OS_Protocol.processIncomingMessage(data);
 
-      OS_Message reqParsed = OS_Protocol.processIncomingMessage(data);
-      localInd ~= reqParsed;
+      localInd ~= ind;
     }
 
     return res;
