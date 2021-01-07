@@ -25,7 +25,7 @@ import datapoint_sdk;
 import errors;
 import socket_server;
 
-enum VERSION = "24_dec_2020";
+enum VERSION = "07_jan_2021";
 
 // struct for commandline params
 
@@ -84,8 +84,8 @@ void main(string[] args) {
     // if device parameter was given in commandline arguments
     params = dsm.getKey(config_prefix ~ ":uart_params", "19200:8E1", true);
 
-    req_channel = dsm.getKey(config_prefix ~ ":req_channel", "dobaos_req", true);
-    cast_channel = dsm.getKey(config_prefix ~ ":bcast_channel", "dobaos_cast", true);
+    req_channel = dsm.getKey(config_prefix ~ ":req_channel", dobaos_prefix ~ "_req", true);
+    cast_channel = dsm.getKey(config_prefix ~ ":bcast_channel", dobaos_prefix ~ "_cast", true);
     dsm.setChannels(req_channel, cast_channel);
 
     stream_maxlen = dsm.getKey(config_prefix ~ ":stream_maxlen", "1000", true);
