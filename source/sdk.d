@@ -612,7 +612,7 @@ class DatapointSdk {
             }
 
             if (_value["number"].type() == JSONType.integer) {
-              _num = to!ubyte(_value["step"].integer);
+              _num = to!ubyte(_value["number"].integer);
             } else if (_value["number"].type() == JSONType.uinteger) {
               _num = to!ubyte(_value["number"].uinteger);
             } else {
