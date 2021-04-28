@@ -99,10 +99,19 @@ class SocketServer {
 
       if (reads.length < max_connections) {
         reads ~= sn;
-        auto addr = sn.remoteAddress().toString();
-        addrs ~= addr;
-        if (onOpen !is null)
-          onOpen(sn, addr);
+        string addr;
+        if (sn.isAlive) {
+          try {
+            addr = sn.remoteAddress().toString();
+          } catch (Exception e) {
+            // e.g. nmap port scan
+            // immediately closes connection
+          }
+          addrs ~= addr;
+          if (onOpen !is null)
+            onOpen(sn, addr);
+        }
+
       } else {
         sn.close();
         assert(!sn.isAlive);
